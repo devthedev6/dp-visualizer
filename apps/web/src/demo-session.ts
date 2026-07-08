@@ -1,7 +1,7 @@
 import { runTopDown } from "@dp-explorer/core";
 import type { ExecutionFrame, PlaybackController } from "@dp-explorer/playback";
 import { createPlaybackController } from "@dp-explorer/playback";
-import { fibonacciSpec } from "@dp-explorer/templates";
+import type { RegisteredTemplate } from "@dp-explorer/templates";
 
 export interface DemoSession {
   readonly controller: PlaybackController;
@@ -12,13 +12,13 @@ export interface DemoSession {
 }
 
 /**
- * Compose the architecture pipeline for the minimal web shell.
+ * Compose the architecture pipeline for a registered DP template.
  *
- * This module orchestrates packages; it does not implement DP logic, trace
- * replay, or frame derivation.
+ * Accepts any template from the registry and produces a playable demo session
+ * using the template's default input.
  */
-export function createFibonacciDemoSession(n = 5): DemoSession {
-  const trace = runTopDown(fibonacciSpec, { n });
+export function createDemoSession(template: RegisteredTemplate): DemoSession {
+  const trace = runTopDown(template.spec, template.defaultInput);
   const controller = createPlaybackController(trace);
 
   return Object.freeze({

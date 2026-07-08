@@ -1,10 +1,20 @@
 import { describe, expect, it } from "vitest";
+import { templateRegistry } from "@dp-explorer/templates";
 
-import { createFibonacciDemoSession } from "../src/demo-session";
+import { createDemoSession } from "../src/demo-session";
 
-describe("createFibonacciDemoSession", () => {
+const fibonacciTemplate = templateRegistry.get("fibonacci");
+
+if (fibonacciTemplate === undefined) {
+  throw new Error("Fibonacci template is not registered.");
+}
+
+describe("createDemoSession", () => {
   it("starts at the first frame", () => {
-    const session = createFibonacciDemoSession(3);
+    const session = createDemoSession({
+      ...fibonacciTemplate,
+      defaultInput: { n: 3 }
+    });
     const frame = session.currentFrame();
 
     expect(frame.frameIndex).toBe(0);
@@ -13,7 +23,10 @@ describe("createFibonacciDemoSession", () => {
   });
 
   it("moves next, previous, and reset through ExecutionFrames", () => {
-    const session = createFibonacciDemoSession(3);
+    const session = createDemoSession({
+      ...fibonacciTemplate,
+      defaultInput: { n: 3 }
+    });
 
     expect(session.next().frameIndex).toBe(1);
     expect(session.next().frameIndex).toBe(2);
@@ -22,7 +35,10 @@ describe("createFibonacciDemoSession", () => {
   });
 
   it("respects frame boundaries", () => {
-    const session = createFibonacciDemoSession(3);
+    const session = createDemoSession({
+      ...fibonacciTemplate,
+      defaultInput: { n: 3 }
+    });
 
     expect(session.previous().frameIndex).toBe(0);
     const last = session.currentFrame().totalFrames - 1;
@@ -35,14 +51,28 @@ describe("createFibonacciDemoSession", () => {
   });
 
   it("produces the same sequence of displayed frame facts for the same trace", () => {
-    const first = readFrameFacts(createFibonacciDemoSession(3));
-    const second = readFrameFacts(createFibonacciDemoSession(3));
+    const first = readFrameFacts({
+      ...fibonacciTemplate,
+      defaultInput: { n: 3 }
+    });
+    const second = readFrameFacts({
+      ...fibonacciTemplate,
+      defaultInput: { n: 3 }
+    });
 
     expect(second).toEqual(first);
   });
+
+  it("creates a session using registered default Fibonacci input", () => {
+    const session = createDemoSession(fibonacciTemplate);
+
+    expect(session.currentFrame().frameIndex).toBe(0);
+    expect(session.currentFrame().currentEvent.type).toBe("CALL");
+  });
 });
 
-function readFrameFacts(session: ReturnType<typeof createFibonacciDemoSession>) {
+function readFrameFacts(template: Parameters<typeof createDemoSession>[0]) {
+  const session = createDemoSession(template);
   const facts = [];
   let frame = session.currentFrame();
 
