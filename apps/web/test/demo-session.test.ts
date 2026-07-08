@@ -4,9 +4,14 @@ import { templateRegistry } from "@dp-explorer/templates";
 import { createDemoSession } from "../src/demo-session";
 
 const fibonacciTemplate = templateRegistry.get("fibonacci");
+const lcsTemplate = templateRegistry.get("longest-common-subsequence");
 
 if (fibonacciTemplate === undefined) {
   throw new Error("Fibonacci template is not registered.");
+}
+
+if (lcsTemplate === undefined) {
+  throw new Error("LCS template is not registered.");
 }
 
 describe("createDemoSession", () => {
@@ -68,6 +73,23 @@ describe("createDemoSession", () => {
 
     expect(session.currentFrame().frameIndex).toBe(0);
     expect(session.currentFrame().currentEvent.type).toBe("CALL");
+  });
+
+  it("computes the correct LCS length for two example strings", () => {
+    const session = createDemoSession({
+      ...lcsTemplate,
+      defaultInput: { first: "ABCDGH", second: "AEDFHR" }
+    });
+
+    const last = session.currentFrame().totalFrames - 1;
+    for (let i = 0; i < last; i += 1) {
+      session.next();
+    }
+
+    expect(session.currentFrame().frameIndex).toBe(last);
+    const completeEvent = session.currentFrame().currentEvent;
+    expect(completeEvent.type).toBe("COMPLETE");
+    expect("answer" in completeEvent ? completeEvent.answer : null).toBe(3);
   });
 });
 

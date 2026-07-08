@@ -1,5 +1,6 @@
 import type { ProblemSpec } from "@dp-explorer/core";
 import { fibonacciSpec } from "./fibonacci";
+import { longestCommonSubsequenceSpec } from "./longest-common-subsequence";
 
 export interface RegisteredTemplate {
   readonly id: string;
@@ -41,4 +42,11 @@ templateRegistry.register({
   name: fibonacciSpec.name,
   spec: fibonacciSpec as ProblemSpec<unknown>,
   defaultInput: { n: 5 }
+});
+
+templateRegistry.register({
+  id: longestCommonSubsequenceSpec.id,
+  name: longestCommonSubsequenceSpec.name,
+  spec: longestCommonSubsequenceSpec as ProblemSpec<unknown>,
+  defaultInput: { first: "ABCDGH", second: "AEDFHR" }
 });

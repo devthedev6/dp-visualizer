@@ -1,0 +1,44 @@
+.frame-details {
+  padding: 16px;
+  background: #f9fafb;
+  color: #111827;
+}
+
+.frame-details dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  margin: 0 0 20px;
+}
+
+.frame-details dt {
+  font-weight: 600;
+  color: #374151;
+}
+
+.frame-details dd {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.frame-details h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.frame-details ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.frame-details li {
+  padding: 4px 8px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.frame-details li + li {
+  margin-top: 4px;
+}

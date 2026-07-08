@@ -1,0 +1,106 @@
+.app-shell {
+  display: grid;
+  grid-template-areas:
+    "header header"
+    "tree tree"
+    "table details"
+    "timeline timeline";
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  grid-template-rows: auto 480px auto auto;
+  gap: 16px;
+  max-width: 1400px;
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.app-header {
+  grid-area: header;
+}
+
+.app-header h1 {
+  margin: 0;
+}
+
+.app-header p {
+  margin: 4px 0 12px;
+  color: #6b7280;
+}
+
+.app-header label,
+.app-header fieldset {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.app-header fieldset {
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+}
+
+.app-recursion-tree {
+  grid-area: tree;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #334155;
+  background: #0f172a;
+}
+
+.app-recursion-tree > * {
+  height: 100%;
+}
+
+.app-recursion-tree .recursion-tree-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.app-recursion-tree .recursion-tree {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+}
+
+.app-table-column {
+  grid-area: table;
+  min-width: 0;
+}
+
+.app-frame-details {
+  grid-area: details;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+}
+
+.app-timeline-column {
+  grid-area: timeline;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.app-playback-controls {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.app-playback-controls button {
+  padding: 8px 16px;
+}
+
+@media (max-width: 960px) {
+  .app-shell {
+    grid-template-areas:
+      "header"
+      "tree"
+      "table"
+      "details"
+      "timeline";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 400px auto auto auto;
+  }
+}
