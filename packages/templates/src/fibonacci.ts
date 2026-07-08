@@ -13,6 +13,9 @@ export interface FibonacciInput {
 export const fibonacciSpec: ProblemSpec<FibonacciInput> = {
   id: "fibonacci",
   name: "Fibonacci",
+  title: "Fibonacci Numbers",
+  description:
+    "Given an integer n, compute the nth Fibonacci number where F(0)=0, F(1)=1, and F(n)=F(n−1)+F(n−2).",
   stateVariables: ["i"],
   inputSchema: [{ name: "n", label: "n", type: "integer", min: 0, max: 20 }],
   dimensions: (input) => [input.n + 1],

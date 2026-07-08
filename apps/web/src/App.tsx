@@ -75,6 +75,12 @@ export function App() {
           </select>
         </label>
 
+        <section className="app-problem-statement" aria-label="Problem statement">
+          <h2>{selectedTemplate.spec.title ?? selectedTemplate.name}</h2>
+          <h3>Problem Statement</h3>
+          <p>{selectedTemplate.spec.description}</p>
+        </section>
+
         <fieldset>
           <legend>Input</legend>
           {selectedTemplate.spec.inputSchema.map((field) => (

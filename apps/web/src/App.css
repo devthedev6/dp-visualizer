@@ -39,6 +39,30 @@
   padding: 12px;
 }
 
+.app-problem-statement {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 12px;
+  background: #f9fafb;
+}
+
+.app-problem-statement h2 {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+}
+
+.app-problem-statement h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  color: #374151;
+}
+
+.app-problem-statement p {
+  margin: 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
 .app-recursion-tree {
   grid-area: tree;
   min-width: 0;

@@ -16,6 +16,9 @@ export interface LongestCommonSubsequenceInput {
 export const longestCommonSubsequenceSpec: ProblemSpec<LongestCommonSubsequenceInput> = {
   id: "longest-common-subsequence",
   name: "Longest Common Subsequence",
+  title: "Longest Common Subsequence",
+  description:
+    "Given two strings, compute the length of their longest common subsequence. A subsequence preserves relative order but characters do not need to be contiguous.",
   stateVariables: ["i", "j"],
   inputSchema: [
     { name: "first", label: "First string", type: "string", maxLength: 8 },

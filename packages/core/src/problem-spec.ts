@@ -72,6 +72,8 @@ export interface TransitionResult {
 export interface ProblemSpec<Input = unknown> {
   readonly id: string;
   readonly name: string;
+  readonly title?: string;
+  readonly description?: string;
   readonly stateVariables: readonly string[];
   readonly inputSchema: readonly InputField[];
   dimensions(input: Input): readonly number[];

@@ -1,6 +1,7 @@
 import type { ProblemSpec } from "@dp-explorer/core";
 import { fibonacciSpec } from "./fibonacci";
 import { longestCommonSubsequenceSpec } from "./longest-common-subsequence";
+import { editDistanceSpec } from "./edit-distance";
 
 export interface RegisteredTemplate {
   readonly id: string;
@@ -49,4 +50,11 @@ templateRegistry.register({
   name: longestCommonSubsequenceSpec.name,
   spec: longestCommonSubsequenceSpec as ProblemSpec<unknown>,
   defaultInput: { first: "ABCDGH", second: "AEDFHR" }
+});
+
+templateRegistry.register({
+  id: editDistanceSpec.id,
+  name: editDistanceSpec.name,
+  spec: editDistanceSpec as ProblemSpec<unknown>,
+  defaultInput: { first: "kitten", second: "sitting" }
 });
