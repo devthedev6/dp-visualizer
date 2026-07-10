@@ -1,6 +1,7 @@
 import type { ProblemSpec } from "./problem-spec";
 import type { ExecutionResult } from "./execution-result";
 import { freezeDpTable } from "./execution-result";
+import { createExtractionContextFromTable } from "./extraction-context";
 import type { StateCoordinates } from "./state-key";
 import { toStateKey } from "./state-key";
 import type { ExecutionTrace } from "./trace";
@@ -18,7 +19,6 @@ import type { TraceEvent, TraceEventId } from "./trace";
 export function runBottomUp<Input>(spec: ProblemSpec<Input>, input: Input): ExecutionResult<Input> {
   const events: TraceEvent[] = [];
   const table = new Map<ReturnType<typeof toStateKey>, number>();
-  let answerReadCount = 0;
   const inputSnapshot = deepFreeze(cloneInput(input));
 
   const nextId = (): TraceEventId => events.length;
@@ -104,27 +104,14 @@ export function runBottomUp<Input>(spec: ProblemSpec<Input>, input: Input): Exec
     });
   }
 
-  const answer = spec.extractAnswer(input, (state) => {
-    if (answerReadCount > 0) {
-      throw new Error("ProblemSpec.extractAnswer must call read exactly once.");
-    }
-
-    answerReadCount += 1;
-    const result = readWrittenState(state);
-    emit({
-      id: nextId(),
-      type: EventType.Read,
-      state: result.stateKey,
-      value: result.value,
-      requestedFor: "ANSWER"
-    });
-
-    return result.value;
+  const dimensions = Object.freeze([...spec.dimensions(input)]);
+  const dpTable = freezeDpTable(table);
+  const extractionContext = createExtractionContextFromTable({
+    dpTable,
+    input: inputSnapshot,
+    dimensions
   });
-
-  if (answerReadCount !== 1) {
-    throw new Error("ProblemSpec.extractAnswer must call read exactly once.");
-  }
+  const answer = spec.extractAnswer(extractionContext);
 
   emit({
     id: nextId(),
@@ -137,13 +124,13 @@ export function runBottomUp<Input>(spec: ProblemSpec<Input>, input: Input): Exec
     mode: "bottom-up",
     input: inputSnapshot,
     stateVariables: Object.freeze([...spec.stateVariables]),
-    dimensions: Object.freeze([...spec.dimensions(input)]),
+    dimensions,
     events: Object.freeze([...events])
   });
 
   return Object.freeze({
     trace,
-    dpTable: freezeDpTable(table)
+    dpTable
   });
 }
 

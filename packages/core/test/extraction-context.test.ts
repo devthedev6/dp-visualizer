@@ -13,6 +13,7 @@ const fibonacciSpec: ProblemSpec<FibonacciInput> = {
   stateVariables: ["i"],
   inputSchema: [{ name: "n", label: "n", type: "integer", min: 0, max: 20 }],
   dimensions: (input) => [input.n + 1],
+  rootState: (input) => [input.n],
   baseCase: (state) => {
     const i = readSingleCoordinate(state);
     return i <= 1 ? { isBase: true, value: i } : { isBase: false };
@@ -26,7 +27,7 @@ const fibonacciSpec: ProblemSpec<FibonacciInput> = {
       yield [i];
     }
   },
-  extractAnswer: (input, read) => read([input.n])
+  extractAnswer: (ctx) => ctx.read([ctx.input.n])
 };
 
 describe("createExtractionContext", () => {
@@ -64,7 +65,7 @@ describe("createExtractionContext", () => {
     Array.from(context.states());
 
     expect(result.trace.events).toBe(traceEventsBeforeRead);
-    expect(result.trace.events).toHaveLength(14);
+    expect(result.trace.events).toHaveLength(13);
   });
 
   it("throws for missing states without computing them", () => {

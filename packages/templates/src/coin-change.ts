@@ -44,6 +44,7 @@ export const coinChangeSpec: ProblemSpec<CoinChangeInput> = {
     { name: "target", label: "Target Amount", type: "integer", min: 0, max: 50 }
   ],
   dimensions: (input) => [input.target + 1],
+  rootState: (input) => [input.target],
   baseCase: (state) => {
     const x = readIndex(state);
 
@@ -75,7 +76,7 @@ export const coinChangeSpec: ProblemSpec<CoinChangeInput> = {
       yield [x];
     }
   },
-  extractAnswer: (input, read) => read([input.target])
+  extractAnswer: (ctx) => ctx.read([ctx.input.target])
 };
 
 function readIndex(state: StateCoordinates): number {

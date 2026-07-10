@@ -45,6 +45,7 @@ export const minimumPathSumSpec: ProblemSpec<MinimumPathSumInput> = {
     }
   ],
   dimensions: (input) => [input.rows, input.columns],
+  rootState: (input) => [input.rows - 1, input.columns - 1],
   baseCase: (state, input) => {
     const [i, j] = readIndices(state);
 
@@ -85,7 +86,7 @@ export const minimumPathSumSpec: ProblemSpec<MinimumPathSumInput> = {
       }
     }
   },
-  extractAnswer: (input, read) => read([input.rows - 1, input.columns - 1])
+  extractAnswer: (ctx) => ctx.read([ctx.input.rows - 1, ctx.input.columns - 1])
 };
 
 function readIndices(state: StateCoordinates): [number, number] {

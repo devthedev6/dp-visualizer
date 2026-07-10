@@ -13,6 +13,7 @@ const fibonacciSpec: ProblemSpec<FibonacciInput> = {
   stateVariables: ["i"],
   inputSchema: [{ name: "n", label: "n", type: "integer", min: 0, max: 20 }],
   dimensions: (input) => [input.n + 1],
+  rootState: (input) => [input.n],
   baseCase: (state) => {
     const i = readSingleCoordinate(state);
     return i <= 1 ? { isBase: true, value: i } : { isBase: false };
@@ -26,7 +27,7 @@ const fibonacciSpec: ProblemSpec<FibonacciInput> = {
       yield [i];
     }
   },
-  extractAnswer: (input, read) => read([input.n])
+  extractAnswer: (ctx) => ctx.read([ctx.input.n])
 };
 
 describe("runBottomUp", () => {
@@ -52,8 +53,7 @@ describe("runBottomUp", () => {
         { id: 9, type: EventType.Read, state: "2", value: 1, requestedFor: "3" },
         { id: 10, type: EventType.Transition, state: "3", usedReads: [8, 9], value: 2 },
         { id: 11, type: EventType.Write, state: "3", value: 2 },
-        { id: 12, type: EventType.Read, state: "3", value: 2, requestedFor: "ANSWER" },
-        { id: 13, type: EventType.Complete, answer: 2 }
+        { id: 12, type: EventType.Complete, answer: 2 }
       ]
     });
   });

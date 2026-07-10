@@ -1,3 +1,4 @@
+import type { ExtractionContext } from "./extraction-context";
 import type { StateCoordinates } from "./state-key";
 
 /**
@@ -93,8 +94,9 @@ export interface ProblemSpec<Input = unknown> {
   readonly stateVariables: readonly string[];
   readonly inputSchema: readonly InputField[];
   dimensions(input: Input): readonly number[];
+  rootState(input: Input): StateCoordinates;
   baseCase(state: StateCoordinates, input: Input): BaseCaseResult;
   transition: Transition<Input>;
   iterationOrder(input: Input): Iterable<StateCoordinates>;
-  extractAnswer(input: Input, read: (state: StateCoordinates) => number): number;
+  extractAnswer(context: ExtractionContext<Input>): number;
 }

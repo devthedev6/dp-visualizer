@@ -28,6 +28,7 @@ export const fibonacciSpec: ProblemSpec<FibonacciInput> = {
   stateVariables: ["i"],
   inputSchema: [{ name: "n", label: "n", type: "integer", min: 0, max: 20 }],
   dimensions: (input) => [input.n + 1],
+  rootState: (input) => [input.n],
   baseCase: (state) => {
     const i = readIndex(state);
     return i <= 1 ? { isBase: true, value: i } : { isBase: false };
@@ -41,7 +42,7 @@ export const fibonacciSpec: ProblemSpec<FibonacciInput> = {
       yield [i];
     }
   },
-  extractAnswer: (input, read) => read([input.n])
+  extractAnswer: (ctx) => ctx.read([ctx.input.n])
 };
 
 function readIndex(state: StateCoordinates): number {

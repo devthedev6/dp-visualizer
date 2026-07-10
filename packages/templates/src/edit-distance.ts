@@ -39,6 +39,7 @@ export const editDistanceSpec: ProblemSpec<EditDistanceInput> = {
     { name: "second", label: "Second string", type: "string", maxLength: 8 }
   ],
   dimensions: (input) => [input.first.length + 1, input.second.length + 1],
+  rootState: () => [0, 0],
   baseCase: (state, input) => {
     const [i, j] = readIndices(state);
 
@@ -73,7 +74,7 @@ export const editDistanceSpec: ProblemSpec<EditDistanceInput> = {
       }
     }
   },
-  extractAnswer: (input, read) => read([0, 0])
+  extractAnswer: (ctx) => ctx.read([0, 0])
 };
 
 function readIndices(state: StateCoordinates): [number, number] {

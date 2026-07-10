@@ -51,6 +51,7 @@ export const knapsackSpec: ProblemSpec<KnapsackInput> = {
     }
   ],
   dimensions: (input) => [input.weights.length + 1, input.capacity + 1],
+  rootState: (input) => [input.weights.length, input.capacity],
   baseCase: (state) => {
     const [i, w] = readIndices(state);
 
@@ -92,7 +93,7 @@ export const knapsackSpec: ProblemSpec<KnapsackInput> = {
       }
     }
   },
-  extractAnswer: (input, read) => read([input.weights.length, input.capacity])
+  extractAnswer: (ctx) => ctx.read([ctx.input.weights.length, ctx.input.capacity])
 };
 
 function readIndices(state: StateCoordinates): [number, number] {

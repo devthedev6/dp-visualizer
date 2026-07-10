@@ -13,6 +13,7 @@ const fibonacciSpec: ProblemSpec<FibonacciInput> = {
   stateVariables: ["i"],
   inputSchema: [{ name: "n", label: "n", type: "integer", min: 0, max: 20 }],
   dimensions: (input) => [input.n + 1],
+  rootState: (input) => [input.n],
   baseCase: (state) => {
     const i = readSingleCoordinate(state);
     return i <= 1 ? { isBase: true, value: i } : { isBase: false };
@@ -26,7 +27,7 @@ const fibonacciSpec: ProblemSpec<FibonacciInput> = {
       yield [i];
     }
   },
-  extractAnswer: (input, read) => read([input.n])
+  extractAnswer: (ctx) => ctx.read([ctx.input.n])
 };
 
 describe("runTopDown", () => {
@@ -58,9 +59,19 @@ describe("runTopDown", () => {
         { id: 15, type: EventType.Transition, state: "3", usedReads: [13, 14], value: 2 },
         { id: 16, type: EventType.Write, state: "3", value: 2 },
         { id: 17, type: EventType.Return, state: "3", value: 2, parentId: null },
-        { id: 18, type: EventType.Read, state: "3", value: 2, requestedFor: "ANSWER" },
-        { id: 19, type: EventType.Complete, answer: 2 }
+        { id: 18, type: EventType.Complete, answer: 2 }
       ]
+    });
+  });
+
+  it("begins top-down execution from the explicit root state", () => {
+    const { trace } = runTopDown(fibonacciSpec, { n: 4 });
+
+    expect(trace.events[0]).toMatchObject({
+      type: EventType.Call,
+      state: "4",
+      depth: 0,
+      parentId: null
     });
   });
 

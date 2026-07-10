@@ -37,6 +37,7 @@ export const longestCommonSubsequenceSpec: ProblemSpec<LongestCommonSubsequenceI
     { name: "second", label: "Second string", type: "string", maxLength: 8 }
   ],
   dimensions: (input) => [input.first.length + 1, input.second.length + 1],
+  rootState: (input) => [input.first.length, input.second.length],
   baseCase: (state) => {
     const [i, j] = readIndices(state);
 
@@ -63,7 +64,7 @@ export const longestCommonSubsequenceSpec: ProblemSpec<LongestCommonSubsequenceI
       }
     }
   },
-  extractAnswer: (input, read) => read([input.first.length, input.second.length])
+  extractAnswer: (ctx) => ctx.read([ctx.input.first.length, ctx.input.second.length])
 };
 
 function readIndices(state: StateCoordinates): [number, number] {
