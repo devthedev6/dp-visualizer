@@ -10,5 +10,5 @@
     "tsBuildInfoFile": "dist/spec-compiler.tsbuildinfo"
   },
   "include": ["src/**/*.ts"],
-  "references": []
+  "references": [{ "path": "../core" }]
 }
