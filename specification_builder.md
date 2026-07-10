@@ -260,6 +260,29 @@ MathJS is used **only** as a parser.
 
 The semantic meaning of every identifier is provided by the compiler.
 
+Operators:
+
+- - - / % ^
+
+Bitwise:
+& | << >> ~ ^|
+
+Comparison:
+== != < <= > >=
+
+Logical:
+&& || !
+
+Functions:
+min max abs floor ceil len rows cols
+
+State references:
+DP(...)
+
+Arrays:
+a[i]
+grid[i][j]
+
 ---
 
 # Specification Builder

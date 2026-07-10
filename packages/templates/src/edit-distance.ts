@@ -39,16 +39,16 @@ export const editDistanceSpec: ProblemSpec<EditDistanceInput> = {
     { name: "second", label: "Second string", type: "string", maxLength: 8 }
   ],
   dimensions: (input) => [input.first.length + 1, input.second.length + 1],
-  rootState: () => [0, 0],
-  baseCase: (state, input) => {
+  rootState: (input) => [input.first.length, input.second.length],
+  baseCase: (state) => {
     const [i, j] = readIndices(state);
 
-    if (i === input.first.length) {
-      return { isBase: true, value: input.second.length - j };
+    if (i === 0) {
+      return { isBase: true, value: j };
     }
 
-    if (j === input.second.length) {
-      return { isBase: true, value: input.first.length - i };
+    if (j === 0) {
+      return { isBase: true, value: i };
     }
 
     return { isBase: false };
@@ -57,13 +57,13 @@ export const editDistanceSpec: ProblemSpec<EditDistanceInput> = {
     const input = ctx.input;
     const [i, j] = readIndices(state);
 
-    if (input.first[i] === input.second[j]) {
-      return ctx.read([i + 1, j + 1]);
+    if (input.first[i - 1] === input.second[j - 1]) {
+      return ctx.read([i - 1, j - 1]);
     }
 
-    const insert = ctx.read([i, j + 1]);
-    const deleteCost = ctx.read([i + 1, j]);
-    const replace = ctx.read([i + 1, j + 1]);
+    const insert = ctx.read([i, j - 1]);
+    const deleteCost = ctx.read([i - 1, j]);
+    const replace = ctx.read([i - 1, j - 1]);
 
     return 1 + Math.min(insert, deleteCost, replace);
   },
@@ -74,7 +74,7 @@ export const editDistanceSpec: ProblemSpec<EditDistanceInput> = {
       }
     }
   },
-  extractAnswer: (ctx) => ctx.read([0, 0])
+  extractAnswer: (ctx) => ctx.read([ctx.input.first.length, ctx.input.second.length])
 };
 
 function readIndices(state: StateCoordinates): [number, number] {

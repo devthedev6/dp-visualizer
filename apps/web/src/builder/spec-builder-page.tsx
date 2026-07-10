@@ -4,6 +4,11 @@ import { BUILDER_STAGES, type BuilderStageId } from "./builder-stages";
 import { SymbolsEditor } from "./symbols-editor";
 import { StateEditor } from "./state-editor";
 import { BoundsEditor } from "./bounds-editor";
+import { BaseCasesEditor } from "./base-cases-editor";
+import { TransitionsEditor } from "./transitions-editor";
+import { RootStateEditor } from "./root-state-editor";
+import { AnswerEditor } from "./answer-editor";
+import { ReviewCompileStage } from "./review-compile-stage";
 
 import "./spec-builder.css";
 
@@ -129,9 +134,11 @@ function BuilderStageView({ stageId }: BuilderStageViewProps) {
       {stageId === "symbols" && <SymbolsEditor />}
       {stageId === "state" && <StateEditor />}
       {stageId === "bounds" && <BoundsEditor />}
-      {stageId !== "symbols" && stageId !== "state" && stageId !== "bounds" && (
-        <p className="builder-placeholder">Forms for this stage will appear here.</p>
-      )}
+      {stageId === "base-cases" && <BaseCasesEditor />}
+      {stageId === "transitions" && <TransitionsEditor />}
+      {stageId === "root-state" && <RootStateEditor />}
+      {stageId === "answer" && <AnswerEditor />}
+      {stageId === "review-compile" && <ReviewCompileStage />}
     </div>
   );
 }

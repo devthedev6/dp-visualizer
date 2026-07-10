@@ -53,16 +53,6 @@ export const minimumPathSumSpec: ProblemSpec<MinimumPathSumInput> = {
       return { isBase: true, value: input.grid[0]?.[0] ?? 0 };
     }
 
-    if (i === 0) {
-      const left = j > 0 ? input.grid[0]?.[j - 1] : undefined;
-      return { isBase: true, value: (input.grid[0]?.[j] ?? 0) + (left ?? 0) };
-    }
-
-    if (j === 0) {
-      const above = i > 0 ? input.grid[i - 1]?.[0] : undefined;
-      return { isBase: true, value: (input.grid[i]?.[0] ?? 0) + (above ?? 0) };
-    }
-
     return { isBase: false };
   },
   transition: (state, ctx) => {
@@ -73,7 +63,12 @@ export const minimumPathSumSpec: ProblemSpec<MinimumPathSumInput> = {
     if (cellCost === undefined) {
       throw new Error("Minimum Path Sum transition references an out-of-bounds cell.");
     }
-
+    if (i == 0) {
+      return ctx.read([0, j - 1]) + cellCost;
+    }
+    if (j == 0) {
+      return ctx.read([i - 1, 0]) + cellCost;
+    }
     const fromAbove = ctx.read([i - 1, j]);
     const fromLeft = ctx.read([i, j - 1]);
 

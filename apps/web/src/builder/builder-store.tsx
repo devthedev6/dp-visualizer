@@ -1,8 +1,10 @@
 import { createContext, useContext, useReducer, type ReactNode } from "react";
 import type {
+  BuilderBaseCase,
   BuilderState,
   BuilderStateVariable,
   BuilderSymbol,
+  BuilderTransition,
   PrimitiveType
 } from "./builder-state";
 import { createDefaultBuilderState } from "./builder-state";
@@ -38,6 +40,28 @@ export type BuilderAction =
       readonly type: "UPDATE_STATE_VARIABLE";
       readonly index: number;
       readonly updates: Partial<BuilderStateVariable>;
+    }
+  | { readonly type: "ADD_BASE_CASE" }
+  | { readonly type: "REMOVE_BASE_CASE"; readonly id: string }
+  | {
+      readonly type: "UPDATE_BASE_CASE";
+      readonly id: string;
+      readonly updates: Partial<BuilderBaseCase>;
+    }
+  | { readonly type: "ADD_TRANSITION" }
+  | { readonly type: "REMOVE_TRANSITION"; readonly id: string }
+  | {
+      readonly type: "UPDATE_TRANSITION";
+      readonly id: string;
+      readonly updates: Partial<BuilderTransition>;
+    }
+  | {
+      readonly type: "SET_ROOT_STATE_EXPRESSION";
+      readonly expression: string;
+    }
+  | {
+      readonly type: "SET_ANSWER_EXPRESSION";
+      readonly expression: string;
     };
 
 export interface BuilderStore {
@@ -59,6 +83,14 @@ function createEmptySymbol(category: BuilderSymbol["category"]): BuilderSymbol {
     return { id: createId(), name: "", category, primitiveType: "integer", dimensions: 1 };
   }
   return { id: createId(), name: "", category, value: "" };
+}
+
+function createEmptyBaseCase(): BuilderBaseCase {
+  return { id: createId(), conditionExpression: "", valueExpression: "" };
+}
+
+function createEmptyTransition(): BuilderTransition {
+  return { id: createId(), conditionExpression: null, valueExpression: "" };
 }
 
 function normalizeStateVariables(
@@ -123,6 +155,32 @@ function builderReducer(state: BuilderState, action: BuilderAction): BuilderStat
           )
         }
       };
+    case "ADD_BASE_CASE":
+      return { ...state, baseCases: [...state.baseCases, createEmptyBaseCase()] };
+    case "REMOVE_BASE_CASE":
+      return { ...state, baseCases: state.baseCases.filter((item) => item.id !== action.id) };
+    case "UPDATE_BASE_CASE":
+      return {
+        ...state,
+        baseCases: state.baseCases.map((item) =>
+          item.id === action.id ? { ...item, ...action.updates } : item
+        )
+      };
+    case "ADD_TRANSITION":
+      return { ...state, transitions: [...state.transitions, createEmptyTransition()] };
+    case "REMOVE_TRANSITION":
+      return { ...state, transitions: state.transitions.filter((item) => item.id !== action.id) };
+    case "UPDATE_TRANSITION":
+      return {
+        ...state,
+        transitions: state.transitions.map((item) =>
+          item.id === action.id ? { ...item, ...action.updates } : item
+        )
+      };
+    case "SET_ROOT_STATE_EXPRESSION":
+      return { ...state, rootStateExpression: action.expression };
+    case "SET_ANSWER_EXPRESSION":
+      return { ...state, answerExpression: action.expression };
     default:
       return state;
   }

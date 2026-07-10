@@ -2,11 +2,17 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AnswerEditor,
+  BaseCasesEditor,
   BoundsEditor,
   BuilderProvider,
+  ExpressionLanguageReference,
+  ReviewCompileStage,
+  RootStateEditor,
   SpecificationBuilderPage,
   StateEditor,
   SymbolsEditor,
+  TransitionsEditor,
   useBuilderState
 } from "../src/builder";
 
@@ -17,7 +23,9 @@ function StateProbe() {
       {state.symbols.length} symbols | {state.state.dimensionCount}D |{" "}
       {state.state.variables
         .map((v) => `${v.name}:${v.lowerBoundExpression}:${v.upperBoundExpression}`)
-        .join(",")}
+        .join(",")}{" "}
+      | {state.baseCases.length} bases | {state.transitions.length} transitions |{" "}
+      {state.rootStateExpression} | {state.answerExpression}
     </pre>
   );
 }
@@ -171,5 +179,127 @@ describe("BoundsEditor", () => {
 
     fireEvent.change(screen.getByLabelText(/^Upper Bound$/i), { target: { value: "n" } });
     expect(screen.getByTestId("state-probe").textContent).toContain(":0:n");
+  });
+});
+
+describe("BaseCasesEditor", () => {
+  it("adds, edits, and removes base cases", () => {
+    render(
+      <BuilderProvider>
+        <BaseCasesEditor />
+        <StateProbe />
+      </BuilderProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /add base case/i }));
+    expect(screen.getByTestId("state-probe").textContent).toContain("3 bases");
+
+    const conditionInputs = screen.getAllByLabelText(/^Condition$/i);
+    fireEvent.change(conditionInputs[conditionInputs.length - 1], { target: { value: "k == 0" } });
+    expect(screen.getAllByDisplayValue("k == 0").length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /remove/i })[0]);
+    expect(screen.getByTestId("state-probe").textContent).toContain("2 bases");
+  });
+});
+
+describe("TransitionsEditor", () => {
+  it("adds, edits, and removes transitions", () => {
+    render(
+      <BuilderProvider>
+        <TransitionsEditor />
+        <StateProbe />
+      </BuilderProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /add transition/i }));
+    expect(screen.getByTestId("state-probe").textContent).toContain("2 transitions");
+
+    const expressionInputs = screen.getAllByLabelText(/^Transition Expression$/i);
+    fireEvent.change(expressionInputs[expressionInputs.length - 1], {
+      target: { value: "min(dp(i) + cost(i, j))" }
+    });
+    expect(screen.getAllByDisplayValue("min(dp(i) + cost(i, j))").length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(screen.getAllByRole("button", { name: /remove/i })[0]);
+    expect(screen.getByTestId("state-probe").textContent).toContain("1 transitions");
+  });
+});
+
+describe("RootStateEditor", () => {
+  it("updates the root state expression in BuilderState", () => {
+    render(
+      <BuilderProvider>
+        <RootStateEditor />
+        <StateProbe />
+      </BuilderProvider>
+    );
+
+    fireEvent.change(screen.getByLabelText(/Root State Expression/i), {
+      target: { value: "DP(n, m)" }
+    });
+    expect(screen.getByTestId("state-probe").textContent).toContain("DP(n, m)");
+  });
+});
+
+describe("AnswerEditor", () => {
+  it("updates the answer expression in BuilderState", () => {
+    render(
+      <BuilderProvider>
+        <AnswerEditor />
+        <StateProbe />
+      </BuilderProvider>
+    );
+
+    fireEvent.change(screen.getByLabelText(/Answer Expression/i), {
+      target: { value: "max(DP(i))" }
+    });
+    expect(screen.getByTestId("state-probe").textContent).toContain("max(DP(i))");
+  });
+});
+
+describe("ReviewCompileStage", () => {
+  it("renders a JSON preview and a disabled compile button", () => {
+    render(
+      <BuilderProvider>
+        <ReviewCompileStage />
+      </BuilderProvider>
+    );
+
+    expect(screen.getByText(/"name": "My Custom DP"/i)).toBeDefined();
+
+    const compileButton = screen.getByRole("button", { name: /compile specification/i });
+    expect(compileButton.matches("[disabled]")).toBe(true);
+  });
+});
+
+describe("ExpressionLanguageReference", () => {
+  it("toggles the reference panel on and off", () => {
+    render(<ExpressionLanguageReference />);
+
+    const toggle = screen.getByRole("button", { name: /show expression language reference/i });
+    expect(toggle).toBeDefined();
+    expect(screen.queryByText(/Arithmetic Operators/i)).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(screen.getByText(/Arithmetic Operators/i)).toBeDefined();
+    expect(screen.getByText(/Bitwise Operators/i)).toBeDefined();
+    expect(screen.getByText(/Comparison Operators/i)).toBeDefined();
+    expect(screen.getByText(/Boolean Operators/i)).toBeDefined();
+    expect(screen.getByText(/Built-in Functions/i)).toBeDefined();
+    expect(screen.getByText(/DP References/i)).toBeDefined();
+    expect(screen.getByText(/Arrays/i)).toBeDefined();
+    expect(screen.getByText(/Constants/i)).toBeDefined();
+    expect(screen.getByText(/Common DP Examples/i)).toBeDefined();
+    expect(screen.getByText(/Parsing and validation will be introduced/i)).toBeDefined();
+
+    fireEvent.click(screen.getByRole("button", { name: /hide expression language reference/i }));
+    expect(screen.queryByText(/Arithmetic Operators/i)).toBeNull();
+  });
+
+  it("renders the bitwise XOR note", () => {
+    render(<ExpressionLanguageReference />);
+    fireEvent.click(screen.getByRole("button", { name: /show expression language reference/i }));
+    expect(screen.getByText(/Use bitXor\(a, b\) for bitwise XOR/i)).toBeDefined();
   });
 });
