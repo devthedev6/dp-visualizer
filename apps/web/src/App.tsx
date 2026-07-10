@@ -9,6 +9,7 @@ import { FrameDetails } from "./frame-details";
 import { PlaybackTimeline } from "./playback-timeline";
 import { DPTable } from "./dp-table";
 import { RecursionTreeView } from "./recursion-tree";
+import { SpecificationBuilderPage } from "./builder";
 
 import "./App.css";
 
@@ -22,6 +23,7 @@ if (firstTemplate === undefined) {
 const defaultTemplate: RegisteredTemplate = firstTemplate;
 
 export function App() {
+  const [mode, setMode] = useState<"templates" | "builder">("templates");
   const [selectedTemplateId, setSelectedTemplateId] = useState(defaultTemplate.id);
   const [input, setInput] = useState<Record<string, unknown>>(() => ({
     ...defaultTemplate.defaultInput
@@ -130,6 +132,11 @@ export function App() {
   }
 
   function selectTemplate(id: string) {
+    if (id === "__custom_dp__") {
+      setMode("builder");
+      return;
+    }
+
     const template = templateRegistry.get(id);
     if (!template) {
       return;
@@ -156,6 +163,10 @@ export function App() {
     }
   }
 
+  if (mode === "builder") {
+    return <SpecificationBuilderPage onExit={() => setMode("templates")} />;
+  }
+
   return (
     <main className="app-shell">
       <header className="app-header">
@@ -174,6 +185,7 @@ export function App() {
                 {template.name}
               </option>
             ))}
+            <option value="__custom_dp__">Custom DP (Experimental)</option>
           </select>
         </label>
 

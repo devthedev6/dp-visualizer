@@ -87,61 +87,26 @@ The execution engine is unaware of how the final answer is obtained.
 
 # New Execution Pipeline
 
-The execution lifecycle becomes:
-
-User selects template
-
-↓
-
-User edits input
-
-↓
-
-Input Model
-
-↓
-
-Validation
-
-↓
-
-ProblemSpec
-
-↓
-
-Execution queued
-
-↓
-
-Execution Engine
-
-↓
-
-ExecutionTrace
-
-↓
-
-Frozen DP Table
-
-↓
-
-Extraction Context
-
-↓
-
-Answer Extraction
-
-↓
-
-Execution Result
-
-↓
-
-Playback Controller
-
-↓
-
-UI
+User Input
+│
+▼
+Generate ProblemSpec
+│
+├──────────────┐
+▼ ▼
+Top-down Bottom-up
+(rootState) (iterationOrder)
+│ │
+└──────┬───────┘
+▼
+ExecutionResult
+(Trace + Frozen DP)
+│
+▼
+ExtractionContext
+│
+▼
+Final Answer
 
 ---
 
@@ -365,6 +330,21 @@ It strengthens the execution architecture while preserving all existing template
 
 ---
 
+### Execution Entry Point (`rootState`)
+
+The top-down and bottom-up execution engines fundamentally solve the same dynamic programming problem, but they require different notions of "where computation begins."
+
+For bottom-up execution, the engine computes every reachable DP state by following a valid `iterationOrder()`. Since every state is visited explicitly, no additional execution entry point is required.
+
+Top-down execution, however, represents recursive memoized evaluation. Rather than evaluating every state independently, it should begin from the state corresponding to the original problem and recursively discover only the states that are actually required.
+
+To support this distinction, every `ProblemSpec` defines:
+
+```ts
+rootState(input): StateCoordinates
+
+---
+
 ## Milestone B — ProblemSpec Compiler
 
 Objective:
@@ -376,6 +356,7 @@ A compiler layer is introduced between external representations and the runtime 
 Conceptually:
 
 ```
+
 External Representation
 
 ↓
@@ -389,6 +370,7 @@ Runtime ProblemSpec
 ↓
 
 Execution Engine
+
 ```
 
 Initially, the only external representation may simply be JSON.
@@ -436,3 +418,5 @@ Similarly, authoring interfaces should never contain execution logic.
 They are responsible only for producing a valid `ProblemSpec`.
 
 This separation ensures that new interfaces can be added without modifying the execution engine.
+
+```

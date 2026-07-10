@@ -70,9 +70,34 @@ Examples of configurable concepts include:
 
 The builder should generate a valid ProblemSpec that can immediately be visualized by the existing execution engine.
 
-No parser or DSL is introduced at this stage.
-
 The objective is to validate that the execution engine is expressive enough for user-authored problems.
+
+User
+│
+▼
+Builder Form
+│
+├── States
+├── Bounds
+├── Base Cases
+├── Transitions
+├── Root State
+└── Answer
+│
+▼
+MathJS Parser
+│
+▼
+Expression AST
+│
+▼
+ProblemSpec Compiler
+│
+▼
+ProblemSpec
+│
+▼
+Runtime
 
 ---
 
@@ -106,7 +131,13 @@ This version focuses on parsing, validation, dependency analysis, and code gener
 
 ---
 
-## Version 3.0+ — AI-Assisted DP Authoring
+## Version 3 – Solution Reconstruction
+
+While the current architecture focuses on how a dynamic programming table is constructed, the next major goal is to explain why the computed answer is correct. Once execution has completed and the DP table has been frozen into an immutable runtime artifact, additional analysis passes can operate on this data without re-executing the algorithm. One such analysis is Solution Reconstruction, which traces the sequence of decisions leading from the answer state back to a base case. Rather than visualizing every computed state, reconstruction highlights only the states and transitions that contribute to the final solution, allowing users to understand the reasoning behind the optimal answer. For built-in templates, reconstruction will initially be implemented individually, enabling features such as highlighting the chosen subsequence in LCS, the optimal path in grid-based problems, the selected items in Knapsack, or the chosen coins in Coin Change. This approach also provides a scalable explanation mechanism for higher-dimensional DP problems, where visualizing the entire DP table becomes impractical. Future iterations may extend the ProblemSpec compiler to support user-defined reconstruction rules, allowing custom dynamic programming problems to benefit from the same level of explanation and visualization.
+
+---
+
+## Version 4.0+ — AI-Assisted DP Authoring
 
 Goal:
 
@@ -183,3 +214,5 @@ The AI layer should never become part of the execution engine.
 # End Goal
 
 The ultimate objective of DP Explorer is to become a platform where users can define, understand, execute, and visualize arbitrary Dynamic Programming formulations—from textbook problems to original competitive programming ideas—using a common execution framework.
+
+DP Explorer is not a collection of DP visualizations. It is a compiler and execution platform for dynamic programming, with multiple interchangeable frontends (templates, builders, DSLs, and future AI assistants) and multiple post-execution analysis passes (playback, visualization, answer extraction, and reconstruction).
