@@ -297,6 +297,85 @@
   cursor: not-allowed;
 }
 
+.builder-compile-status {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #f9fafb;
+}
+
+.builder-compile-status h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.95rem;
+}
+
+.builder-compile-status p {
+  margin: 0;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.builder-compile-status--success {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.builder-compile-status--success h4,
+.builder-compile-status--success p {
+  color: #166534;
+}
+
+.builder-compile-status--failure {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.builder-compile-status--failure h4,
+.builder-compile-status--failure > p {
+  color: #991b1b;
+}
+
+.builder-diagnostics-list {
+  margin: 0.75rem 0 0 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.builder-diagnostic-item {
+  padding-left: 0.25rem;
+}
+
+.builder-diagnostic-message {
+  color: #7f1d1d;
+  font-weight: 600;
+}
+
+.builder-diagnostic-meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.25rem 0.75rem;
+  margin: 0.5rem 0 0 0;
+  font-size: 0.8125rem;
+}
+
+.builder-diagnostic-meta dt {
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.builder-diagnostic-meta dd {
+  margin: 0;
+  color: #374151;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.builder-diagnostic-meta code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
 .builder-reference {
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;

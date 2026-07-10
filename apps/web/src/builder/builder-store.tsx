@@ -1,4 +1,6 @@
 import { createContext, useContext, useReducer, type ReactNode } from "react";
+import type { CompilerDiagnostic } from "@dp-explorer/spec-compiler";
+import type { ProblemSpec } from "@dp-explorer/core";
 import type {
   BuilderBaseCase,
   BuilderState,
@@ -62,10 +64,27 @@ export type BuilderAction =
   | {
       readonly type: "SET_ANSWER_EXPRESSION";
       readonly expression: string;
+    }
+  | {
+      readonly type: "COMPILE_SUCCESS";
+      readonly problemSpec: ProblemSpec<Record<string, unknown>>;
+    }
+  | {
+      readonly type: "COMPILE_FAILURE";
+      readonly diagnostics: readonly CompilerDiagnostic[];
     };
+
+export type CompilationStatus = "idle" | "success" | "failure";
+
+export interface BuilderCompilationState {
+  readonly status: CompilationStatus;
+  readonly problemSpec: ProblemSpec<Record<string, unknown>> | null;
+  readonly diagnostics: readonly CompilerDiagnostic[];
+}
 
 export interface BuilderStore {
   readonly builderState: BuilderState;
+  readonly compilation: BuilderCompilationState;
   readonly dispatch: (action: BuilderAction) => void;
 }
 
@@ -93,6 +112,19 @@ function createEmptyTransition(): BuilderTransition {
   return { id: createId(), conditionExpression: null, valueExpression: "" };
 }
 
+function createInitialCompilationState(): BuilderCompilationState {
+  return {
+    status: "idle",
+    problemSpec: null,
+    diagnostics: []
+  };
+}
+
+interface BuilderReducerState {
+  readonly builderState: BuilderState;
+  readonly compilation: BuilderCompilationState;
+}
+
 function normalizeStateVariables(
   variables: readonly BuilderStateVariable[],
   dimensionCount: number
@@ -110,77 +142,126 @@ function normalizeStateVariables(
   return next;
 }
 
-function builderReducer(state: BuilderState, action: BuilderAction): BuilderState {
+function withBuilderState(builderState: BuilderState): BuilderReducerState {
+  return {
+    builderState,
+    compilation: createInitialCompilationState()
+  };
+}
+
+function builderReducer(state: BuilderReducerState, action: BuilderAction): BuilderReducerState {
   switch (action.type) {
     case "RESET":
-      return createDefaultBuilderState();
+      return withBuilderState(createDefaultBuilderState());
     case "SET_STATE":
-      return action.state;
+      return withBuilderState(action.state);
     case "UPDATE_STATE":
-      return { ...state, ...action.partial };
+      return withBuilderState({ ...state.builderState, ...action.partial });
     case "UPDATE_STAGE_FIELD":
-      return { ...state, [action.stage]: action.value };
+      return withBuilderState({ ...state.builderState, [action.stage]: action.value });
     case "ADD_SYMBOL":
-      return { ...state, symbols: [...state.symbols, createEmptySymbol(action.category)] };
+      return withBuilderState({
+        ...state.builderState,
+        symbols: [...state.builderState.symbols, createEmptySymbol(action.category)]
+      });
     case "REMOVE_SYMBOL":
-      return { ...state, symbols: state.symbols.filter((symbol) => symbol.id !== action.id) };
+      return withBuilderState({
+        ...state.builderState,
+        symbols: state.builderState.symbols.filter((symbol) => symbol.id !== action.id)
+      });
     case "UPDATE_SYMBOL":
-      return {
-        ...state,
-        symbols: state.symbols.map((symbol) =>
+      return withBuilderState({
+        ...state.builderState,
+        symbols: state.builderState.symbols.map((symbol) =>
           symbol.id === action.id ? { ...symbol, ...action.updates } : symbol
         )
-      };
+      });
     case "SET_DIMENSION_COUNT":
-      return {
-        ...state,
+      return withBuilderState({
+        ...state.builderState,
         state: {
-          ...state.state,
+          ...state.builderState.state,
           dimensionCount: action.count,
-          variables: normalizeStateVariables(state.state.variables, action.count)
+          variables: normalizeStateVariables(state.builderState.state.variables, action.count)
         }
-      };
+      });
     case "SET_STATE_MEANING":
-      return {
-        ...state,
-        state: { ...state.state, meaning: action.meaning }
-      };
+      return withBuilderState({
+        ...state.builderState,
+        state: { ...state.builderState.state, meaning: action.meaning }
+      });
     case "UPDATE_STATE_VARIABLE":
-      return {
-        ...state,
+      return withBuilderState({
+        ...state.builderState,
         state: {
-          ...state.state,
-          variables: state.state.variables.map((variable, index) =>
+          ...state.builderState.state,
+          variables: state.builderState.state.variables.map((variable, index) =>
             index === action.index ? { ...variable, ...action.updates } : variable
           )
         }
-      };
+      });
     case "ADD_BASE_CASE":
-      return { ...state, baseCases: [...state.baseCases, createEmptyBaseCase()] };
+      return withBuilderState({
+        ...state.builderState,
+        baseCases: [...state.builderState.baseCases, createEmptyBaseCase()]
+      });
     case "REMOVE_BASE_CASE":
-      return { ...state, baseCases: state.baseCases.filter((item) => item.id !== action.id) };
+      return withBuilderState({
+        ...state.builderState,
+        baseCases: state.builderState.baseCases.filter((item) => item.id !== action.id)
+      });
     case "UPDATE_BASE_CASE":
-      return {
-        ...state,
-        baseCases: state.baseCases.map((item) =>
+      return withBuilderState({
+        ...state.builderState,
+        baseCases: state.builderState.baseCases.map((item) =>
           item.id === action.id ? { ...item, ...action.updates } : item
         )
-      };
+      });
     case "ADD_TRANSITION":
-      return { ...state, transitions: [...state.transitions, createEmptyTransition()] };
+      return withBuilderState({
+        ...state.builderState,
+        transitions: [...state.builderState.transitions, createEmptyTransition()]
+      });
     case "REMOVE_TRANSITION":
-      return { ...state, transitions: state.transitions.filter((item) => item.id !== action.id) };
+      return withBuilderState({
+        ...state.builderState,
+        transitions: state.builderState.transitions.filter((item) => item.id !== action.id)
+      });
     case "UPDATE_TRANSITION":
-      return {
-        ...state,
-        transitions: state.transitions.map((item) =>
+      return withBuilderState({
+        ...state.builderState,
+        transitions: state.builderState.transitions.map((item) =>
           item.id === action.id ? { ...item, ...action.updates } : item
         )
-      };
+      });
     case "SET_ROOT_STATE_EXPRESSION":
-      return { ...state, rootStateExpression: action.expression };
+      return withBuilderState({
+        ...state.builderState,
+        rootStateExpression: action.expression
+      });
     case "SET_ANSWER_EXPRESSION":
-      return { ...state, answerExpression: action.expression };
+      return withBuilderState({
+        ...state.builderState,
+        answerExpression: action.expression
+      });
+    case "COMPILE_SUCCESS":
+      return {
+        ...state,
+        compilation: {
+          status: "success",
+          problemSpec: action.problemSpec,
+          diagnostics: []
+        }
+      };
+    case "COMPILE_FAILURE":
+      return {
+        ...state,
+        compilation: {
+          status: "failure",
+          problemSpec: null,
+          diagnostics: action.diagnostics
+        }
+      };
     default:
       return state;
   }
@@ -192,9 +273,14 @@ export interface BuilderProviderProps {
 }
 
 export function BuilderProvider({ children, initialState }: BuilderProviderProps) {
-  const [state, dispatch] = useReducer(builderReducer, initialState ?? createDefaultBuilderState());
+  const [state, dispatch] = useReducer(builderReducer, {
+    builderState: initialState ?? createDefaultBuilderState(),
+    compilation: createInitialCompilationState()
+  });
   return (
-    <BuilderContext.Provider value={{ builderState: state, dispatch }}>
+    <BuilderContext.Provider
+      value={{ builderState: state.builderState, compilation: state.compilation, dispatch }}
+    >
       {children}
     </BuilderContext.Provider>
   );
@@ -206,6 +292,14 @@ export function useBuilderState(): BuilderState {
     throw new Error("useBuilderState must be used within a BuilderProvider.");
   }
   return store.builderState;
+}
+
+export function useBuilderCompilation(): BuilderCompilationState {
+  const store = useContext(BuilderContext);
+  if (store === null) {
+    throw new Error("useBuilderCompilation must be used within a BuilderProvider.");
+  }
+  return store.compilation;
 }
 
 export function useBuilderDispatch(): (action: BuilderAction) => void {

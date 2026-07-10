@@ -71,6 +71,9 @@ importers:
       '@dp-explorer/playback':
         specifier: workspace:*
         version: link:../../packages/playback
+      '@dp-explorer/spec-compiler':
+        specifier: workspace:*
+        version: link:../../packages/spec-compiler
       '@dp-explorer/templates':
         specifier: workspace:*
         version: link:../../packages/templates

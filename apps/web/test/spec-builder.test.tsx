@@ -13,6 +13,7 @@ import {
   StateEditor,
   SymbolsEditor,
   TransitionsEditor,
+  useBuilderCompilation,
   useBuilderState
 } from "../src/builder";
 
@@ -26,6 +27,16 @@ function StateProbe() {
         .join(",")}{" "}
       | {state.baseCases.length} bases | {state.transitions.length} transitions |{" "}
       {state.rootStateExpression} | {state.answerExpression}
+    </pre>
+  );
+}
+
+function CompilationProbe() {
+  const compilation = useBuilderCompilation();
+  return (
+    <pre data-testid="compilation-probe">
+      {compilation.status} | {compilation.problemSpec?.name ?? "none"} |{" "}
+      {compilation.diagnostics.length} diagnostics
     </pre>
   );
 }
@@ -259,7 +270,7 @@ describe("AnswerEditor", () => {
 });
 
 describe("ReviewCompileStage", () => {
-  it("renders a JSON preview and a disabled compile button", () => {
+  it("renders a JSON preview and an enabled compile button", () => {
     render(
       <BuilderProvider>
         <ReviewCompileStage />
@@ -269,7 +280,52 @@ describe("ReviewCompileStage", () => {
     expect(screen.getByText(/"name": "My Custom DP"/i)).toBeDefined();
 
     const compileButton = screen.getByRole("button", { name: /compile specification/i });
-    expect(compileButton.matches("[disabled]")).toBe(true);
+    expect(compileButton.matches("[disabled]")).toBe(false);
+    expect(screen.getByText(/not compiled yet/i)).toBeDefined();
+  });
+
+  it("stores a ProblemSpec when compilation succeeds", () => {
+    render(
+      <BuilderProvider initialState={createCompilableBuilderState()}>
+        <ReviewCompileStage />
+        <CompilationProbe />
+      </BuilderProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /compile specification/i }));
+
+    expect(screen.getByText(/compiled successfully/i)).toBeDefined();
+    expect(screen.getByTestId("compilation-probe").textContent).toContain(
+      "success | Fibonacci | 0 diagnostics"
+    );
+  });
+
+  it("displays diagnostics when compilation fails", () => {
+    render(
+      <BuilderProvider
+        initialState={{
+          ...createCompilableBuilderState(),
+          transitions: [
+            {
+              id: "transition-1",
+              conditionExpression: null,
+              valueExpression: "DP(i - 1) +"
+            }
+          ]
+        }}
+      >
+        <ReviewCompileStage />
+        <CompilationProbe />
+      </BuilderProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /compile specification/i }));
+
+    expect(screen.getByText(/compilation failed/i)).toBeDefined();
+    expect(screen.getByText("transitions.0.valueExpression")).toBeDefined();
+    expect(screen.getByTestId("compilation-probe").textContent).toContain(
+      "failure | none | 1 diagnostics"
+    );
   });
 });
 
@@ -303,3 +359,53 @@ describe("ExpressionLanguageReference", () => {
     expect(screen.getByText(/Use bitXor\(a, b\) for bitwise XOR/i)).toBeDefined();
   });
 });
+
+function createCompilableBuilderState() {
+  return {
+    metadata: {
+      name: "Fibonacci",
+      description: "Generated Fibonacci specification"
+    },
+    symbols: [
+      {
+        id: "symbol-n",
+        name: "n",
+        category: "primitive",
+        primitiveType: "integer"
+      }
+    ],
+    state: {
+      dimensionCount: 1,
+      variables: [
+        {
+          name: "i",
+          lowerBoundExpression: "0",
+          upperBoundExpression: "n"
+        }
+      ],
+      meaning: "dp[i]"
+    },
+    baseCases: [
+      {
+        id: "base-0",
+        conditionExpression: "i == 0",
+        valueExpression: "0"
+      },
+      {
+        id: "base-1",
+        conditionExpression: "i == 1",
+        valueExpression: "1"
+      }
+    ],
+    transitions: [
+      {
+        id: "transition-1",
+        conditionExpression: null,
+        valueExpression: "DP(i - 1) + DP(i - 2)"
+      }
+    ],
+    rootStateExpression: "DP(n)",
+    answerExpression: "DP(n)",
+    executionMode: "bottom-up"
+  } as const;
+}

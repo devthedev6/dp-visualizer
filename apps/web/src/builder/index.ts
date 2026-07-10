@@ -13,8 +13,18 @@ export type {
 } from "./builder-state";
 export { createDefaultBuilderState } from "./builder-state";
 
-export { BuilderProvider, useBuilderState, useBuilderDispatch } from "./builder-store";
-export type { BuilderAction, BuilderStore } from "./builder-store";
+export {
+  BuilderProvider,
+  useBuilderCompilation,
+  useBuilderState,
+  useBuilderDispatch
+} from "./builder-store";
+export type {
+  BuilderAction,
+  BuilderCompilationState,
+  BuilderStore,
+  CompilationStatus
+} from "./builder-store";
 
 export { SymbolsEditor } from "./symbols-editor";
 export { StateEditor } from "./state-editor";
