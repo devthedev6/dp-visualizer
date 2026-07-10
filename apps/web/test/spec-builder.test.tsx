@@ -298,6 +298,7 @@ describe("ReviewCompileStage", () => {
     expect(screen.getByTestId("compilation-probe").textContent).toContain(
       "success | Fibonacci | 0 diagnostics"
     );
+    expect(screen.getByRole("button", { name: /run specification/i })).toBeDefined();
   });
 
   it("displays diagnostics when compilation fails", () => {
@@ -326,6 +327,32 @@ describe("ReviewCompileStage", () => {
     expect(screen.getByTestId("compilation-probe").textContent).toContain(
       "failure | none | 1 diagnostics"
     );
+    expect(screen.queryByRole("button", { name: /run specification/i })).toBeNull();
+  });
+
+  it("executes a compiled ProblemSpec through the existing playback UI", () => {
+    render(
+      <BuilderProvider initialState={createCompilableBuilderState()}>
+        <ReviewCompileStage />
+      </BuilderProvider>
+    );
+
+    expect(screen.queryByRole("button", { name: /run specification/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /compile specification/i }));
+    fireEvent.change(screen.getByLabelText(/^n$/i), { target: { value: "3" } });
+    fireEvent.click(screen.getByRole("button", { name: /run specification/i }));
+
+    expect(screen.getByTestId("recursion-tree")).toBeDefined();
+    expect(screen.getByRole("heading", { name: "DP table" })).toBeDefined();
+    expect(screen.getByText(/Current event/i)).toBeDefined();
+    expect(screen.getByTestId("timeline-position").textContent).toContain("1 /");
+
+    fireEvent.click(screen.getByRole("button", { name: /^next$/i }));
+    expect(screen.getByTestId("timeline-position").textContent).toContain("2 /");
+
+    fireEvent.click(screen.getByRole("button", { name: /^reset$/i }));
+    expect(screen.getByTestId("timeline-position").textContent).toContain("1 /");
   });
 });
 
@@ -406,6 +433,6 @@ function createCompilableBuilderState() {
     ],
     rootStateExpression: "DP(n)",
     answerExpression: "DP(n)",
-    executionMode: "bottom-up"
+    executionMode: "top-down"
   } as const;
 }

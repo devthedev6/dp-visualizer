@@ -376,6 +376,115 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
+.builder-runtime-panel {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #ffffff;
+}
+
+.builder-runtime-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.builder-runtime-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.builder-runtime-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 0 0 1rem 0;
+  background: #f9fafb;
+}
+
+.builder-runtime-inputs legend {
+  font-weight: 600;
+  padding: 0 0.5rem;
+}
+
+.builder-execution-error {
+  margin: 0 0 1rem 0;
+  color: #991b1b;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.builder-playback {
+  display: grid;
+  grid-template-areas:
+    "tree tree"
+    "table details"
+    "timeline timeline";
+  grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  grid-template-rows: 420px auto auto;
+  gap: 1rem;
+}
+
+.builder-playback-tree {
+  grid-area: tree;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #334155;
+  background: #0f172a;
+}
+
+.builder-playback-tree > * {
+  height: 100%;
+}
+
+.builder-playback-tree .recursion-tree-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.builder-playback-tree .recursion-tree {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+}
+
+.builder-playback-table {
+  grid-area: table;
+  min-width: 0;
+}
+
+.builder-playback-details {
+  grid-area: details;
+  min-width: 0;
+  border: 1px solid #e5e7eb;
+}
+
+.builder-playback-timeline {
+  grid-area: timeline;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+@media (max-width: 960px) {
+  .builder-playback {
+    grid-template-areas:
+      "tree"
+      "table"
+      "details"
+      "timeline";
+    grid-template-columns: 1fr;
+    grid-template-rows: 360px auto auto auto;
+  }
+}
+
 .builder-reference {
   border: 1px solid #e5e7eb;
   border-radius: 0.5rem;

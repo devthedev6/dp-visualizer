@@ -1,8 +1,10 @@
-import { runTopDown } from "@dp-explorer/core";
+import { runBottomUp, runTopDown, type ProblemSpec } from "@dp-explorer/core";
 import type { ExecutionFrame, PlaybackController } from "@dp-explorer/playback";
 import { createPlaybackController } from "@dp-explorer/playback";
 import type { RegisteredTemplate } from "@dp-explorer/templates";
 import { coordinateKey } from "@dp-explorer/templates";
+
+export type RuntimeExecutionMode = "top-down" | "bottom-up";
 
 export interface DemoSession {
   readonly controller: PlaybackController;
@@ -20,7 +22,15 @@ export interface DemoSession {
  */
 export function createDemoSession(template: RegisteredTemplate): DemoSession {
   const normalizedInput = normalizeInput(template.id, template.defaultInput);
-  const result = runTopDown(template.spec, normalizedInput);
+  return createProblemSpecSession(template.spec, normalizedInput, "top-down");
+}
+
+export function createProblemSpecSession<Input>(
+  spec: ProblemSpec<Input>,
+  input: Input,
+  mode: RuntimeExecutionMode
+): DemoSession {
+  const result = mode === "bottom-up" ? runBottomUp(spec, input) : runTopDown(spec, input);
   const controller = createPlaybackController(result.trace);
 
   return Object.freeze({
