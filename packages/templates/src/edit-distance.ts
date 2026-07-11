@@ -68,8 +68,8 @@ export const editDistanceSpec: ProblemSpec<EditDistanceInput> = {
     return 1 + Math.min(insert, deleteCost, replace);
   },
   iterationOrder: function* (input) {
-    for (let i = input.first.length; i >= 0; i -= 1) {
-      for (let j = input.second.length; j >= 0; j -= 1) {
+    for (let i = 0; i <= input.first.length; i += 1) {
+      for (let j = 0; j <= input.second.length; j += 1) {
         yield [i, j];
       }
     }

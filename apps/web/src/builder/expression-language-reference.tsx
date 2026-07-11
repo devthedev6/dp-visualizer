@@ -3,7 +3,7 @@ import { useState } from "react";
 const ARITHMETIC_OPERATORS = ["+", "-", "*", "/", "%", "^"];
 const BITWISE_OPERATORS = ["&", "|", "~", "<<", ">>"];
 const COMPARISON_OPERATORS = ["==", "!=", "<", "<=", ">", ">="];
-const BOOLEAN_OPERATORS = ["&&", "||", "!"];
+const BOOLEAN_OPERATORS = ["and", "or", "not"];
 const AGGREGATE_FUNCTIONS = ["min(...)", "max(...)"];
 const BUILT_IN_FUNCTIONS = [
   "abs(...)",
@@ -74,6 +74,22 @@ export function ExpressionLanguageReference({
 
           <ReferenceSection title="Logical Operators">
             <code>{BOOLEAN_OPERATORS.join("  ")}</code>
+            <ul>
+              <li>
+                <code>a == b and c == d</code>
+              </li>
+              <li>
+                <code>x &gt;0 or y &gt; 0</code>
+              </li>
+              <li>
+                <code>not visited</code>
+              </li>
+            </ul>
+            <p className="builder-reference-note">
+              Use the MathJS keywords <code>and</code>, <code>or</code>, and <code>not</code>. C/C++
+              operators such as <code>&amp;&amp;</code>,<code>||</code>, and <code>!</code> are not
+              supported.
+            </p>
           </ReferenceSection>
 
           <ReferenceSection title="Parentheses">
