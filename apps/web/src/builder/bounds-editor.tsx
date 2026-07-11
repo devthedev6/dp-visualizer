@@ -1,4 +1,5 @@
 import { useBuilderDispatch, useBuilderState } from "./builder-store";
+import { ExpressionLanguageReference } from "./expression-language-reference";
 
 export function BoundsEditor() {
   const state = useBuilderState();
@@ -7,6 +8,8 @@ export function BoundsEditor() {
 
   return (
     <div className="builder-editor">
+      <ExpressionLanguageReference />
+
       {variables.length === 0 && (
         <p className="builder-placeholder">No state variables declared yet.</p>
       )}

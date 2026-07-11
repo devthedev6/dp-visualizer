@@ -4,9 +4,8 @@ const ARITHMETIC_OPERATORS = ["+", "-", "*", "/", "%", "^"];
 const BITWISE_OPERATORS = ["&", "|", "~", "<<", ">>"];
 const COMPARISON_OPERATORS = ["==", "!=", "<", "<=", ">", ">="];
 const BOOLEAN_OPERATORS = ["&&", "||", "!"];
+const AGGREGATE_FUNCTIONS = ["min(...)", "max(...)"];
 const BUILT_IN_FUNCTIONS = [
-  "min(...)",
-  "max(...)",
   "abs(...)",
   "floor(...)",
   "ceil(...)",
@@ -14,12 +13,14 @@ const BUILT_IN_FUNCTIONS = [
   "rows(...)",
   "cols(...)"
 ];
-const DP_EXAMPLES = ["DP(i)", "DP(i, j)", "DP(layer, i, j)"];
+const DP_EXAMPLES = ["DP(i)", "DP(i,j)", "DP(i,j,k)", "DP(i,j,k,l)"];
 const ARRAY_EXAMPLES = ["coins[i]", "grid[i][j]", "word[i]"];
 const CONSTANT_EXAMPLES = ["MOD", "INF"];
 const DP_EXPRESSION_EXAMPLES = [
+  "1 + DP(i-1)",
   "1 + min(DP(i-1), DP(i-2))",
-  "DP(i, j-1) + grid[i][j]",
+  "max(DP(i-1,j), DP(i,j-1))",
+  "DP(i,j) + grid[i][j]",
   "(mask & (1 << i)) != 0",
   "bitXor(mask, 1 << i)",
   "(DP(i) + value) % MOD"
@@ -45,8 +46,8 @@ export function ExpressionLanguageReference({
       {open && (
         <div className="builder-reference-panel">
           <p className="builder-reference-intro">
-            Expressions are stored exactly as typed. Parsing and validation will be introduced in
-            the next milestone.
+            Use this language for bounds, conditions, recurrence values, root states, and answer
+            expressions.
           </p>
 
           <ReferenceSection title="Arithmetic Operators">
@@ -71,7 +72,7 @@ export function ExpressionLanguageReference({
             <code>{COMPARISON_OPERATORS.join("  ")}</code>
           </ReferenceSection>
 
-          <ReferenceSection title="Boolean Operators">
+          <ReferenceSection title="Logical Operators">
             <code>{BOOLEAN_OPERATORS.join("  ")}</code>
           </ReferenceSection>
 
@@ -79,12 +80,21 @@ export function ExpressionLanguageReference({
             <code>( )</code>
           </ReferenceSection>
 
+          <ReferenceSection title="Aggregate Functions">
+            <code>{AGGREGATE_FUNCTIONS.join("  ")}</code>
+          </ReferenceSection>
+
           <ReferenceSection title="Built-in Functions">
             <code>{BUILT_IN_FUNCTIONS.join("  ")}</code>
           </ReferenceSection>
 
-          <ReferenceSection title="DP References">
+          <ReferenceSection title="DP State Access">
             <code>{DP_EXAMPLES.join("  ")}</code>
+            <p>
+              Reference DP states with <code>DP(...)</code>, not <code>dp[]</code> indexing.
+              <code> DP()</code> is a built-in language construct; <code>dp[]</code> is treated as
+              normal array access.
+            </p>
           </ReferenceSection>
 
           <ReferenceSection title="Arrays">
@@ -103,6 +113,13 @@ export function ExpressionLanguageReference({
                 </li>
               ))}
             </ul>
+          </ReferenceSection>
+
+          <ReferenceSection title="Currently Unsupported">
+            <p>
+              Functions such as <code>popcount(...)</code>, <code>clz(...)</code>,{" "}
+              <code>ctz(...)</code>, and <code>parity(...)</code> are planned for a future release.
+            </p>
           </ReferenceSection>
         </div>
       )}

@@ -357,6 +357,24 @@ describe("ReviewCompileStage", () => {
 });
 
 describe("ExpressionLanguageReference", () => {
+  it("is available on every expression entry stage", () => {
+    const expressionEditors = [
+      <BoundsEditor key="bounds" />,
+      <BaseCasesEditor key="base-cases" />,
+      <TransitionsEditor key="transitions" />,
+      <RootStateEditor key="root-state" />,
+      <AnswerEditor key="answer" />
+    ];
+
+    for (const editor of expressionEditors) {
+      const { unmount } = render(<BuilderProvider>{editor}</BuilderProvider>);
+      expect(
+        screen.getByRole("button", { name: /show expression language reference/i })
+      ).toBeDefined();
+      unmount();
+    }
+  });
+
   it("toggles the reference panel on and off", () => {
     render(<ExpressionLanguageReference />);
 
@@ -368,13 +386,14 @@ describe("ExpressionLanguageReference", () => {
     expect(screen.getByText(/Arithmetic Operators/i)).toBeDefined();
     expect(screen.getByText(/Bitwise Operators/i)).toBeDefined();
     expect(screen.getByText(/Comparison Operators/i)).toBeDefined();
-    expect(screen.getByText(/Boolean Operators/i)).toBeDefined();
+    expect(screen.getByText(/Logical Operators/i)).toBeDefined();
+    expect(screen.getByText(/Aggregate Functions/i)).toBeDefined();
     expect(screen.getByText(/Built-in Functions/i)).toBeDefined();
-    expect(screen.getByText(/DP References/i)).toBeDefined();
+    expect(screen.getByText(/DP State Access/i)).toBeDefined();
     expect(screen.getByText(/Arrays/i)).toBeDefined();
     expect(screen.getByText(/Constants/i)).toBeDefined();
     expect(screen.getByText(/Common DP Examples/i)).toBeDefined();
-    expect(screen.getByText(/Parsing and validation will be introduced/i)).toBeDefined();
+    expect(screen.getByText(/Currently Unsupported/i)).toBeDefined();
 
     fireEvent.click(screen.getByRole("button", { name: /hide expression language reference/i }));
     expect(screen.queryByText(/Arithmetic Operators/i)).toBeNull();
@@ -384,6 +403,18 @@ describe("ExpressionLanguageReference", () => {
     render(<ExpressionLanguageReference />);
     fireEvent.click(screen.getByRole("button", { name: /show expression language reference/i }));
     expect(screen.getByText(/Use bitXor\(a, b\) for bitwise XOR/i)).toBeDefined();
+  });
+
+  it("explains DP state access and realistic DP expressions", () => {
+    render(<ExpressionLanguageReference />);
+    fireEvent.click(screen.getByRole("button", { name: /show expression language reference/i }));
+
+    expect(screen.getByText(/Reference DP states with/i)).toBeDefined();
+    expect(screen.getByText(/normal array access/i)).toBeDefined();
+    expect(screen.getByText(/DP\(i,j,k,l\)/i)).toBeDefined();
+    expect(screen.getByText("max(DP(i-1,j), DP(i,j-1))")).toBeDefined();
+    expect(screen.getByText("DP(i,j) + grid[i][j]")).toBeDefined();
+    expect(screen.getByText("popcount(...)")).toBeDefined();
   });
 });
 
