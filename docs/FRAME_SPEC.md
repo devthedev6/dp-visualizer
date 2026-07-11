@@ -1,225 +1,359 @@
 # Frame Specification
 
-An `ExecutionFrame` is the complete, immutable application state for one
-instant in time. It is computed by the Playback Engine from the
-`ExecutionTrace` on each navigation step.
+## Overview
 
-**The Visualization Layer renders exclusively from an `ExecutionFrame`. It
-never reads `ExecutionTrace` directly.**
+The Playback Engine transforms an immutable `ExecutionTrace` into a sequence of immutable `ExecutionFrame`s.
 
-A frame at index `i` reflects the state **after** applying event `i`. This
-means `seek(lastIndex)` always produces the complete final state, and every
-event (including `CALL` and `WRITE`) is visible at the frame where it occurs.
+An `ExecutionFrame` represents the **complete visualization state for one instant in time**. Every navigation operation (`next`, `previous`, `seek`) produces exactly one frame, which completely describes what should be displayed by the Visualization Layer.
 
-## Interface
+```
+Execution Trace
+        │
+        ▼
+Playback Controller
+        │
+        ▼
+Execution Frame
+        │
+        ▼
+Visualization Layer
+```
 
-```typescript
+The Visualization Layer renders **exclusively** from an `ExecutionFrame`. It never reads the underlying `ExecutionTrace` directly.
+
+A frame at index `i` always represents the application state **after** applying event `i`.
+
+Consequently,
+
+- `seek(0)` represents the first observable execution event.
+- `seek(lastIndex)` always represents the fully completed execution.
+- Every event—including `CALL`, `READ`, `WRITE`, and `RETURN`—is visible at the frame where it occurs.
+
+---
+
+# ExecutionFrame Interface
+
+```ts
 interface ExecutionFrame {
-  /** Index into ExecutionTrace.events for this frame (0-based). */
+  /** Index into ExecutionTrace.events (0-based). */
   frameIndex: number;
 
-  /** The event at this frame. */
+  /** Event represented by this frame. */
   currentEvent: TraceEvent;
 
   /**
-   * Metadata required to render generic DP tables without reading
-   * ExecutionTrace directly.
+   * Metadata required for generic DP-table rendering.
+   *
+   * This allows the Visualization Layer to render tables without
+   * accessing the ExecutionTrace directly.
    */
   table: DPTableMetadata;
 
   /**
-   * All DP cells filled so far, keyed by StateKey.
-   * Updated by both WRITE events and BASE_CASE events (see Derivation Rules).
+   * Snapshot of every computed DP cell after this frame.
+   *
+   * Keys are serialized StateKeys.
    */
   dpSnapshot: ReadonlyMap<StateKey, number>;
 
   /**
-   * Active call chain — top-down mode only.
-   * Ordered outermost-first. Contains the StateKey of every CALL that has
-   * been entered but not yet resolved (no RETURN / BASE_CASE / MEMO_HIT
-   * terminal). Always an empty array in bottom-up mode.
+   * Active recursive call chain.
+   *
+   * Empty for bottom-up execution.
    */
   callStack: readonly StateKey[];
 
   /**
-   * Recursion tree snapshot — top-down mode only; null in bottom-up mode.
-   * Contains all CALL nodes seen up to and including frameIndex, each with
-   * their resolved outcome (if already resolved) or null if still open.
-   * When null, the Visualization Layer hides the recursion tree panel.
+   * Current recursion tree.
+   *
+   * Null for bottom-up execution.
    */
   recursionTree: RecursionTree | null;
 
   /**
-   * The event id of the deepest open CALL at this frame.
-   * null in bottom-up mode or before the first CALL.
+   * Deepest active recursion node.
+   *
+   * Null when no recursive call is active.
    */
   activeNodeId: number | null;
 
   /**
-   * Cells to highlight in the DP table at this frame.
-   * Derived from currentEvent (see Derivation Rules).
+   * Cells highlighted by the current frame.
    */
   highlightedCells: readonly HighlightedCell[];
 
   /**
-   * For TRANSITION events: the StateKey of each cell that was READ during
-   * this transition, resolved from TRANSITION.usedReads.
-   * Empty array for all other event types.
+   * Dependencies used by the current transition.
    *
-   * This is the only frame field whose value cannot be trivially derived
-   * from currentEvent alone — it requires a lookup into earlier READ events.
-   * Providing it here means the Visualization Layer never needs to scan the
-   * trace directly.
+   * Only populated for TRANSITION events.
    */
   resolvedDependencies: readonly StateKey[];
 
-  /** true if frameIndex === 0. */
+  /** True iff frameIndex == 0 */
   isFirst: boolean;
-  /** true if currentEvent.type === "COMPLETE". */
+
+  /** True iff currentEvent.type == COMPLETE */
   isLast: boolean;
-  /** Total number of frames (= trace.events.length). */
+
+  /** Total frame count. */
   totalFrames: number;
 }
 ```
 
-## Supporting Types
+---
 
-```typescript
-type StateKey = string; // coordinates joined with commas, e.g. "3,7"
-// matches the serialisation used by the Execution Engine
+# Supporting Types
 
+```ts
+type StateKey = string;
+```
+
+Coordinates serialized by the runtime.
+
+Examples
+
+```
+"5"
+"3,7"
+"2,1,4"
+```
+
+---
+
+```ts
 interface HighlightedCell {
   state: StateKey;
   role: "active" | "dependency" | "memo-hit" | "base-case";
 }
+```
 
+---
+
+```ts
 interface DPTableMetadata {
-  /** Axis names, copied from ExecutionTrace.stateVariables. */
+  /** Axis names. */
   stateVariables: readonly string[];
-  /** Axis sizes for this concrete input, copied from ExecutionTrace.dimensions. */
+
+  /** Concrete dimensions for this execution. */
   dimensions: readonly number[];
 }
+```
 
+Although the runtime supports arbitrary-dimensional state spaces, the current web application visualizes DP tables only for one- and two-dimensional specifications.
+
+---
+
+```ts
 interface RecursionTree {
-  /** All call nodes seen up to frameIndex, keyed by CALL event id. */
   nodes: ReadonlyMap<number, RecursionNode>;
-  /** Event id of the root CALL node (parentId === null). */
+
   rootId: number;
 }
+```
 
+---
+
+```ts
 interface RecursionNode {
-  /** id of the CALL event that opened this node. */
   callEventId: number;
-  /** id of the parent CALL event; null for the root. */
+
   parentCallId: number | null;
-  /** The DP state this call is computing. */
+
   state: StateKey;
-  /**
-   * Resolved outcome once a terminal event has been seen for this call,
-   * or null if the call is still open at this frame.
-   */
+
   outcome: "return" | "memo-hit" | "base-case" | null;
-  /** id of the terminal event; null if still open. */
+
   terminalEventId: number | null;
-  /** Resolved value; null if still open. */
+
   value: number | null;
 }
 ```
 
-## Field Derivation Rules
+---
 
-The rules below define exactly how each field is computed from the event stream.
-All rules are stated as "replay events 0 through frameIndex (inclusive)."
+# Frame Derivation
 
-### `dpSnapshot`
+Every field of an `ExecutionFrame` is deterministic.
 
-Replay `WRITE` events **and** `BASE_CASE` events. Both update the snapshot:
+To construct frame `i`, replay events
 
-- `WRITE { state, value }` — `snapshot.set(state, value)`
-- `BASE_CASE { state, value }` — `snapshot.set(state, value)`
+```
+trace.events[0...i]
+```
 
-**Rationale.** In top-down mode, base-case states are memoized via their
-`BASE_CASE` event — no separate `WRITE` is emitted for them. Including
-`BASE_CASE` in the snapshot rule keeps table rendering consistent across both
-execution modes: a base-case cell is "filled" at the moment its `BASE_CASE`
-event fires.
+and derive each field according to the rules below.
 
-### `table`
+---
 
-Copy immutable table metadata from the trace:
+## dpSnapshot
 
-- `stateVariables = trace.stateVariables`
-- `dimensions = trace.dimensions`
+Replay both
 
-**Rationale.** The Visualization Layer renders exclusively from
-`ExecutionFrame` and never reads `ExecutionTrace` directly. Generic DP table
-rendering needs to know the full state-space dimensions so it can render both
-computed cells and unknown/uncomputed cells. Carrying this lightweight metadata
-in the frame preserves that boundary without adding algorithmic responsibility
-to the UI.
+- WRITE
+- BASE_CASE
 
-### `callStack`
+events.
 
-Scan events in order:
+Both write values into the snapshot.
 
-- `CALL` — push `state`
-- `RETURN` / `BASE_CASE` / `MEMO_HIT` — pop the top of the stack
+```
+WRITE
+    snapshot[state] = value
 
-Empty in bottom-up mode (no `CALL` events are emitted).
+BASE_CASE
+    snapshot[state] = value
+```
 
-### `recursionTree`
+This ensures base-case states appear in the DP table immediately after they are evaluated.
 
-Scan events in order:
+---
 
-- `CALL { id, parentId, state }` — add a new `RecursionNode` with
-  `callEventId = id`, `parentCallId = parentId`, `state`, `outcome = null`.
-  If `parentId === null`, set `rootId = id`.
+## table
 
-- `RETURN { id, state, value }` — find the node for this call; set
-  `outcome = "return"`, `terminalEventId = id`, `value`.
+Copied directly from the immutable trace.
 
-- `BASE_CASE { id, state, value }` (top-down only) — same lookup; set
-  `outcome = "base-case"`, `terminalEventId = id`, `value`.
+```
+stateVariables
+dimensions
+```
 
-- `MEMO_HIT { id, state, value }` — same lookup; set
-  `outcome = "memo-hit"`, `terminalEventId = id`, `value`.
-  **`MEMO_HIT` nodes appear in the tree as leaf nodes** — they are never
-  suppressed. Seeing a memo hit as a short-circuited leaf is part of the
-  pedagogical goal of the top-down visualization.
+No computation occurs.
 
-`null` in bottom-up mode (the trace contains no `CALL` events).
+---
 
-### `activeNodeId`
+## callStack
 
-The `callEventId` of the deepest open `RecursionNode` at this frame (i.e., the
-node at the top of the call stack). Derived from `callStack` — look up the most
-recently pushed `StateKey` in `recursionTree.nodes` to retrieve its
-`callEventId`. `null` in bottom-up mode.
+Replay events sequentially.
 
-### `highlightedCells`
+```
+CALL
+    push(state)
 
-| `currentEvent.type` | Highlights produced                                                                 |
-| ------------------- | ----------------------------------------------------------------------------------- |
-| `CALL`              | `active` — the called state                                                         |
-| `MEMO_HIT`          | `memo-hit` — the hit state                                                          |
-| `BASE_CASE`         | `base-case` — the base state                                                        |
-| `READ`              | `dependency` — the read state                                                       |
-| `TRANSITION`        | `active` — the computed state; `dependency` — every state in `resolvedDependencies` |
-| `WRITE`             | `active` — the written state                                                        |
-| `RETURN`            | `active` — the returned state                                                       |
-| `COMPLETE`          | (empty — no per-cell highlight)                                                     |
+RETURN
+BASE_CASE
+MEMO_HIT
+    pop()
+```
 
-### `resolvedDependencies`
+Bottom-up execution produces no CALL events.
 
-Only non-empty for `TRANSITION` events. For a `TRANSITION { usedReads }`:
-scan `trace.events[0..frameIndex]` to find each `READ` event whose `id` is in
-`usedReads`, and collect their `state` values in order.
+Therefore
 
-This is the only derivation that requires looking beyond `currentEvent`. It is
-computed by the Playback Engine so the Visualization Layer never scans the
-trace directly.
+```
+callStack == []
+```
 
-### `isFirst` / `isLast`
+for all bottom-up frames.
 
-- `isFirst = (frameIndex === 0)`
-- `isLast = (currentEvent.type === "COMPLETE")`
+---
+
+## recursionTree
+
+Replay all CALL events encountered so far.
+
+Each CALL creates one node.
+
+RETURN
+
+BASE_CASE
+
+MEMO_HIT
+
+resolve the corresponding node.
+
+Bottom-up execution produces
+
+```
+recursionTree = null
+```
+
+for every frame.
+
+---
+
+## activeNodeId
+
+The deepest unresolved recursion node.
+
+Equivalent to the top of the current call stack.
+
+Null whenever recursion is inactive.
+
+---
+
+## highlightedCells
+
+Highlights are derived solely from the current event.
+
+| Event      | Highlight           |
+| ---------- | ------------------- |
+| CALL       | active              |
+| READ       | dependency          |
+| TRANSITION | active + dependency |
+| WRITE      | active              |
+| BASE_CASE  | base-case           |
+| MEMO_HIT   | memo-hit            |
+| RETURN     | active              |
+| COMPLETE   | none                |
+
+---
+
+## resolvedDependencies
+
+Only TRANSITION events contain dependencies.
+
+For every referenced READ id,
+
+locate the corresponding READ event,
+
+then collect its state.
+
+The Playback Engine performs this lookup so the Visualization Layer never scans the trace.
+
+---
+
+## Navigation Flags
+
+```
+isFirst =
+    frameIndex == 0
+
+isLast =
+    currentEvent.type == COMPLETE
+
+totalFrames =
+    trace.events.length
+```
+
+---
+
+# Design Notes
+
+The `ExecutionFrame` exists to separate execution from visualization.
+
+The Runtime is responsible for evaluating dynamic programming recurrences.
+
+The Playback Engine is responsible for replaying execution history.
+
+The Visualization Layer is responsible only for rendering immutable frame data.
+
+This separation keeps the user interface deterministic and prevents React components from reconstructing execution state.
+
+---
+
+# Scope
+
+This specification defines the contract between the Playback Engine and the Visualization Layer.
+
+It intentionally does **not** specify
+
+- execution algorithms,
+- trace generation,
+- recurrence evaluation, or
+- rendering implementation.
+
+Those responsibilities are documented separately in
+
+- `PLAYBACK_SPEC.md`
+- `PROBLEM_SPEC.md`
+- `ARCHITECTURE.md`

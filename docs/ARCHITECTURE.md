@@ -1,208 +1,378 @@
 # Architecture
 
-## Repo Layout
+## Overview
 
-DP Explorer is a small monorepo. The Execution Engine has zero UI knowledge —
-this is enforced structurally, not just by convention: it lives in a package
-that never imports React and can run in plain Node.
+DP Explorer is a compiler-backed dynamic programming visualization platform.
+
+Unlike traditional DP visualizers that implement a fixed collection of hardcoded algorithms, DP Explorer introduces a small domain-specific language (DSL) for describing dynamic programming recurrences.
+
+Users construct a specification through an interactive Builder. This specification is compiled into a runtime-compatible `ProblemSpec`, which is then executed by a common execution engine. The resulting execution trace is replayed through a playback engine and rendered by the visualization layer.
+
+The project is intentionally divided into independent layers:
+
+```
+Builder
+    ↓
+Compiler
+    ↓
+Runtime
+    ↓
+Playback
+    ↓
+Visualization
+```
+
+Each layer communicates only through well-defined interfaces and has exactly one responsibility.
+
+---
+
+# Repository Layout
 
 ```
 dp-explorer/
-├── packages/
-│   ├── core/          # Problem Specification types, Execution Engine, Trace types,
-│   │                  # Statistics utilities. Pure TS. No DOM, no React.
-│   ├── playback/      # Playback Engine + ExecutionFrame builder.
-│   │                  # Depends only on core's trace types. No React.
-│   └── templates/     # Built-in ProblemSpecs (Fibonacci, Knapsack, LCS, Grid Paths)
-│                      # Depends only on core.
-└── apps/
-    └── web/           # React + Vite. Visualization Layer only.
-                       # Depends on core + playback + templates.
-                       # Contains zero algorithmic logic.
+
+apps/
+└── web/
+    ├── Specification Builder
+    ├── Runtime Input UI
+    ├── Visualization
+    └── Demo Sessions
+
+packages/
+├── core/
+│   ├── ProblemSpec interfaces
+│   ├── Execution Engines
+│   ├── Trace model
+│   └── Statistics utilities
+│
+├── playback/
+│   ├── Playback Controller
+│   └── Execution Frame generation
+│
+├── spec-compiler/
+│   ├── Parser
+│   ├── Semantic Validator
+│   ├── ProblemSpec Generator
+│   ├── Runtime Input Parser
+│   └── Compiler Facade
+│
+└── templates/
+    └── Built-in DP specifications
 ```
 
-Specification documents for each component:
+Each package has a single responsibility and may depend only on lower architectural layers.
 
-| Spec                           | Covers                                                     |
-| ------------------------------ | ---------------------------------------------------------- |
-| `docs/PROBLEM_SPEC.md`         | `ProblemSpec` interface and template authoring contract    |
-| `docs/EXECUTION_TRACE_SPEC.md` | `TraceEvent` schema, event-sequence rules, worked examples |
-| `docs/PLAYBACK_SPEC.md`        | `PlaybackController` behavioral contract                   |
-| `docs/FRAME_SPEC.md`           | `ExecutionFrame` interface and field-derivation rules      |
-| `docs/UI_SPEC.md`              | Visualization layer layout, visual language, interactions  |
-| `docs/CODEX_GUIDE.md`          | Implementation conventions for contributors                |
+---
 
-## Core Components
+# High-Level Architecture
 
-### 1. Problem Specification (`packages/core`)
+```
+                 Specification Builder
+                          │
+                          ▼
+                    BuilderState
+                          │
+                          ▼
+              ┌────────────────────────┐
+              │ Specification Compiler │
+              └────────────────────────┘
+                          │
+             parseSpecification()
+                          │
+                          ▼
+              ParsedSpecification
+                          │
+          validateSpecification()
+                          │
+                          ▼
+            ValidatedSpecification
+                          │
+         generateProblemSpec()
+                          │
+                          ▼
+                     ProblemSpec
+                          │
+             ┌────────────┴────────────┐
+             ▼                         ▼
+      Top-Down Runtime          Bottom-Up Runtime
+             │                         │
+             └────────────┬────────────┘
+                          ▼
+                  Execution Trace
+                          │
+                          ▼
+                 Playback Controller
+                          │
+                          ▼
+                  Execution Frame
+                          │
+                          ▼
+                  Visualization UI
+```
 
-A declarative description of a DP problem's state space, base cases, and
-recurrence — see `docs/PROBLEM_SPEC.md` for the full schema.
+The Builder never executes algorithms.
 
-Template authors supply _only_ the math (dimensions, base case, transition,
-how to read the answer). They never write loops or recursion — the engine
-owns that, which is what keeps this an engine rather than a set of
-hand-animated demos.
+The Runtime never performs visualization.
 
-Eventually generated from (future, not MVP):
+The UI never recomputes dynamic programming logic.
 
-- Built-in templates ← MVP scope
-- User-defined state descriptions
-- LLM
-- Parsed code
+---
 
-### 2. Execution Engine (`packages/core`)
+# Compiler Pipeline
 
-Input: a `ProblemSpec`, concrete input values, and a chosen mode.
+The compiler transforms a declarative Builder specification into an executable
+`ProblemSpec`.
 
-Output: an `ExecutionTrace`.
+The compilation pipeline consists of four stages.
 
-Two entry points, same spec:
+## 1. BuilderState
 
-- `runTopDown(spec, input): ExecutionTrace`
-- `runBottomUp(spec, input): ExecutionTrace`
+The Builder stores the user's specification in a purely declarative format.
+
+It contains:
+
+- metadata
+- input symbols
+- state variables
+- bounds
+- base cases
+- transitions
+- root state
+- answer expression
+- execution mode
+- initial DP value
+
+BuilderState contains no executable logic.
+
+---
+
+## 2. Parser
+
+The parser converts Builder expressions into immutable MathJS abstract syntax
+trees (ASTs).
 
 Responsibilities:
 
-- Walk the state space (recursively or iteratively, per mode)
-- In bottom-up mode: check `baseCase` before calling `transition` for every
-  state yielded by `iterationOrder`. Base-case states emit `BASE_CASE + WRITE`
-  and bypass `transition`. Non-base states proceed through `READ* + TRANSITION
-  - WRITE`.
-- Instrument every `read()` call the spec makes, emitting trace events with
-  full provenance
-- Validate bottom-up iteration order at runtime (a read of an unwritten cell
-  is a spec bug — the engine throws immediately rather than the UI silently
-  showing an empty cell)
-- Zero UI knowledge, zero rendering concerns
+- Parse expressions
+- Produce diagnostics
+- Preserve source information
+- Build ParsedSpecification
 
-### 3. Execution Trace (`packages/core`)
+No semantic validation occurs here.
 
-An immutable, ordered list of events — the single source of truth for every
-visualization. See `docs/EXECUTION_TRACE_SPEC.md`.
+---
 
-Every derived value (a cell's contents, why a cell has that value, whether a
-call was a memo hit) must be answerable by reading the trace, never by
-recomputing spec logic in the UI.
+## 3. Semantic Validator
 
-### 4. Statistics Utilities (`packages/core`)
+The validator verifies that the parsed specification is meaningful.
 
-Pure functions that scan the `ExecutionTrace` up to a given event index and
-return running counts. They live in `packages/core` because they are pure
-functions of the trace data — no UI knowledge required.
+Responsibilities include:
 
-```typescript
-// All exported from packages/core
-function countCalls(events: TraceEvent[], upToIndex: number): number;
-function countMemoHits(events: TraceEvent[], upToIndex: number): number;
-function countBaseCases(events: TraceEvent[], upToIndex: number): number;
-```
+- identifier resolution
+- symbol lookup
+- state-variable validation
+- function validation
+- array indexing validation
+- dependency validation
 
-The **Visualization Layer** calls these helpers directly with the current
-frame index. The **Playback Engine** does not own, cache, or pre-compute
-statistics — they are computed on-demand by the UI. This keeps the Playback
-Engine a pure deterministic state machine.
+The validator never executes expressions.
 
-### 5. Playback Engine (`packages/playback`)
+Successful validation produces an immutable
+`ValidatedSpecification`.
 
-Responsible for:
+---
 
-- Next / Previous / Seek
+## 4. ProblemSpec Generator
 
-A pure, deterministic state machine over `(trace, currentIndex)`. It never
-executes algorithms, and it never knows what a "Knapsack" or a "table" is —
-it only knows about event indices.
+The final compiler stage transforms the validated specification into an
+executable `ProblemSpec`.
 
-On each navigation call the Playback Engine computes and returns an immutable
-`ExecutionFrame` — the complete snapshot the Visualization Layer renders from.
-Frame computation is **idempotent**: the same trace and the same index always
-produce the same frame regardless of the sequence of prior navigation calls.
+This object is runtime-compatible and can be executed by either execution
+engine without modification.
 
-How the engine is driven — timers, `requestAnimationFrame`, manual stepping in
-tests — is the responsibility of the caller. The Playback Engine has no opinion
-on timing and owns no lifecycle.
+The generator performs no semantic validation.
 
-See `docs/PLAYBACK_SPEC.md` for the `PlaybackController` behavioral contract.
+---
 
-### 6. Execution Frame (`packages/playback`)
+# Runtime Pipeline
 
-An `ExecutionFrame` is the complete, immutable application state for one
-instant in time. It is computed by the Playback Engine from the trace on each
-navigation step and consumed exclusively by the Visualization Layer.
+The runtime consumes a compiled `ProblemSpec`.
 
-A frame at index `i` reflects the state **after** applying event `i`. This
-means `seek(lastIndex)` always produces the complete final state, and every
-event type (including `CALL` and `WRITE`) is "visible" at the frame where it
-occurs.
+Two execution engines are currently implemented.
 
-See `docs/FRAME_SPEC.md` for the full `ExecutionFrame` interface and
-field-derivation rules.
+- Top-Down
+- Bottom-Up
 
-### 7. Visualization Layer (`apps/web`)
+Both engines share the same specification interface.
 
-Receives the current `ExecutionFrame` from the Playback Engine and renders:
+Execution produces an immutable `ExecutionTrace`.
 
-- **DP table** (1D and 2D — dimension count comes from
-  `frame.table.dimensions.length`; the Playback Engine copies this table
-  metadata from the trace into each frame so the Visualization Layer never
-  reads `ExecutionTrace` directly)
-- **Recursion tree** (top-down mode only — `frame.recursionTree` is `null` in
-  bottom-up mode, so this panel is hidden)
-- **Explanation panel** — template-driven: a static map of explanation
-  templates keyed by `TraceEvent.type` lives in `apps/web`. For each event
-  type, the template is populated with fields already present in
-  `frame.currentEvent` and `frame.resolvedDependencies` (the cell coordinates
-  of any `READ` events referenced by a `TRANSITION`). No DP logic is
-  recomputed — all required data is already present in the frame.
-- **Timeline**
-- **Statistics** — computed on-demand by calling helper utilities from
-  `packages/core` with `frame.frameIndex`. Not pre-computed in the frame.
+The runtime owns:
 
-No algorithmic computation happens inside the UI. If a visualization needs
-information the trace doesn't carry, the fix is to enrich the trace schema —
-never to recompute in the component.
+- state evaluation
+- memoization
+- dependency resolution
+- trace generation
 
-## Data Flow
+The runtime has zero UI knowledge.
+
+---
+
+# Playback Pipeline
+
+The playback engine converts an immutable execution trace into immutable
+execution frames.
 
 ```
-Problem Specification
+Execution Trace
         ↓
-Execution Engine (runTopDown / runBottomUp)
+Playback Controller
         ↓
-Execution Trace (immutable event log)
-        ↓
-Playback Engine
-        ↓
-Execution Frame (immutable per-step snapshot)
-        ↓
-Visualization Layer
+Execution Frame
 ```
 
-Statistics utilities (`packages/core`) are called by the Visualization Layer
-as pure functions of the trace; they are not part of the main pipeline.
+Each frame represents one instant during execution.
 
-## Boundaries (explicit, not silent)
+Frames are deterministic.
 
-- **State is a coordinate vector (`number[]`).** This generalizes cleanly
-  across 1D, 2D, 3D+, bitmask DP (mask as an integer axis), digit DP, and
-  interval/partial-grid DP (`iterationOrder` only yields valid states, so
-  triangular tables are fine). It does **not** cover Tree DP or Graph DP,
-  where the natural state is a node reference rather than a coordinate. That
-  is future work (see `docs/ROADMAP.md`), not an MVP gap.
-- **No backend for MVP.** Specs are trusted, authored code (not
-  user-submitted code), so the whole pipeline runs client-side. A backend
-  only becomes necessary for future "arbitrary user code" parsing, where
-  sandboxed execution is a real concern.
-- **Input sizes are capped** per-template (see `docs/PROBLEM_SPEC.md` →
-  `InputField`) to keep traces small enough for smooth scrubbing. This is a
-  teaching tool, not a solver for production-sized inputs.
+The same trace and frame index always produce the same frame.
 
-## Future Work
+Playback never executes DP logic.
 
-- **Dependency graph** — A dependency graph may be derived from the trace to
-  power solution reconstruction, state-dependency visualization, heatmaps,
-  and advanced graph-based visualizations. Not required for MVP.
-- **Tree DP / Graph DP** — requires a node-reference-based state model,
-  distinct from the current coordinate-vector model (see `docs/ROADMAP.md`).
-- **Natural language → DP specification** and **arbitrary code parsing** —
-  would require a backend for sandboxed execution; post-MVP.
+---
+
+# Visualization Layer
+
+The web application renders execution frames produced by the playback engine.
+
+Depending on the specification, the UI displays:
+
+- DP table (1D and 2D)
+- recursion tree (top-down only)
+- execution timeline
+- playback controls
+- current execution state
+- extracted answer
+- runtime statistics
+
+For specifications with three or more dimensions, execution proceeds normally,
+while the DP table is replaced by an informational message indicating that
+higher-dimensional visualization is not yet supported.
+
+---
+
+# Design Principles
+
+DP Explorer follows several architectural principles.
+
+## Separation of Concerns
+
+Compilation, execution, playback, and visualization are completely independent.
+
+Each layer communicates only through stable interfaces.
+
+---
+
+## Immutable Intermediate Representations
+
+Every compiler stage produces immutable output.
+
+```
+BuilderState
+
+↓
+
+ParsedSpecification
+
+↓
+
+ValidatedSpecification
+
+↓
+
+ProblemSpec
+```
+
+No stage mutates the output of another.
+
+---
+
+## Trace as the Single Source of Truth
+
+The visualization never recomputes dynamic programming logic.
+
+Everything displayed in the UI is derived from the execution trace.
+
+If additional information is needed, the trace schema should be extended rather
+than recalculating values inside the UI.
+
+---
+
+## Runtime Independence
+
+Execution engines know nothing about React.
+
+The compiler knows nothing about playback.
+
+The UI knows nothing about recurrence evaluation.
+
+This separation allows every layer to evolve independently.
+
+---
+
+# Current Scope (Version 1.5)
+
+DP Explorer currently supports:
+
+- custom DP specification builder
+- compiler-backed specification generation
+- top-down execution
+- bottom-up execution
+- playback controls
+- execution traces
+- recursion trees
+- runtime statistics
+- initial DP values
+- primitive and array runtime inputs
+- up to five state dimensions
+- visualization for one- and two-dimensional DP tables
+
+Execution of higher-dimensional specifications is fully supported.
+
+Visualization of higher-dimensional tables is intentionally postponed.
+
+---
+
+# Future Evolution
+
+Version 2 introduces a second execution model for propagation-based dynamic
+programming.
+
+The current runtime models functional recurrences of the form
+
+```
+DP(state) = expression
+```
+
+Future versions will additionally support propagation-style recurrences where
+states distribute values to successor states.
+
+This execution model requires a dedicated propagation engine rather than an
+extension of the current recursive runtime.
+
+See `ROADMAP.md` for planned future work.
+
+---
+
+# Related Documentation
+
+| Document               | Description                     |
+| ---------------------- | ------------------------------- |
+| `PROBLEM_SPEC.md`      | Runtime specification interface |
+| `COMPILER.md`          | Compilation pipeline            |
+| `LANGUAGE.md`          | Builder language reference      |
+| `PLAYBACK_SPEC.md`     | Playback controller             |
+| `FRAME_SPEC.md`        | Execution frame model           |
+| `UI_SPEC.md`           | Visualization layer             |
+| `ROADMAP.md`           | Planned future work             |
+| `DESIGN_PRINCIPLES.md` | Architectural decisions         |

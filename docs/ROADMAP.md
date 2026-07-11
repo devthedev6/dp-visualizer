@@ -1,65 +1,197 @@
 # Roadmap
 
-Each stage is scoped to be handed to a coding agent as one self-contained
-prompt, with a clear, testable "done" condition.
+DP Explorer is being developed incrementally.
 
-## Stage 1 — Repo scaffold
+Each release expands the capabilities of the platform while preserving the core architectural principle:
 
-pnpm workspace: `packages/core`, `packages/playback`, `packages/templates`,
-`apps/web`. TypeScript strict mode, Vitest, Vite. No logic yet.
-**Done when:** clean install, build, and empty test suite all pass across
-every package.
-
-## Stage 2 — Core types
-
-`ProblemSpec`, `TransitionCtx`, `InputField`, `TraceEvent`, `ExecutionTrace`
-(see `docs/PROBLEM_SPEC.md`, `docs/EXECUTION_TRACE_SPEC.md`) in
-`packages/core`. Types and input validation only — no engine execution yet.
-**Done when:** the Fibonacci and Knapsack specs from `docs/PROBLEM_SPEC.md`
-both type-check against `ProblemSpec` with no `any`.
-
-## Stage 3 — Engine core: Fibonacci (1D) + Knapsack (2D), both modes
-
-`runTopDown` and `runBottomUp` in `packages/core`, plus both specs in
-`packages/templates`. Golden/snapshot trace tests for all four combinations
-(2 problems × 2 modes).
-**This is the real gate:** if identical engine code handles a 1-axis and a
-2-axis problem in both modes with zero engine changes between them,
-genericity is proven, not asserted.
-
-## Stage 4 — Playback Engine
-
-Pure state machine over `(trace, index)`: next / previous / seek. Lives in
-`packages/playback`, framework-agnostic, unit-tested with no React involved.
-See `docs/PLAYBACK_SPEC.md` for the behavioral contract.
-
-## Stage 5 — Visualization MVP
-
-`apps/web`: timeline controls, 1D table (Fibonacci) and 2D grid table
-(Knapsack), recursion tree (top-down), explanation panel (template-driven,
-populated from `frame.currentEvent` and `frame.resolvedDependencies`), and a
-top-down/bottom-up toggle for the same input.
-**First point the whole pipeline is felt end-to-end.**
-
-## Stage 6 — LCS + Grid Paths
-
-New `ProblemSpec` values in `packages/templates`. Should require no engine
-or playback changes — if it does, that's a signal Stage 3's design needs
-revisiting.
-
-## Stage 7 — Stats, polish, deploy
-
-Call count / memo-hit count / etc., all derived by counting event types in
-the trace. Visual polish. Static deploy (no backend needed for MVP).
+> **Dynamic programming specifications should compile into a generic runtime rather than requiring problem-specific execution code.**
 
 ---
 
-## Future / Post-MVP
+# Current Release
 
-- Natural language → DP specification
-- Arbitrary code parsing → DP specification
-- Tree DP / Graph DP (state as node reference, not coordinate vector — a
-  distinct spec model, see `docs/ARCHITECTURE.md` → Boundaries)
-- Digit DP, bitmask DP as additional built-in templates (already supported
-  by the coordinate-vector state model — no engine changes expected)
-- Algorithm evolution & greedy-vs-DP comparison
+## Version 1.5 — Compiler-Backed Dynamic Programming
+
+**Status:** Released
+
+Version 1.5 establishes the complete end-to-end architecture of DP Explorer.
+
+```
+Builder
+      ↓
+Compiler
+      ↓
+ProblemSpec
+      ↓
+Runtime
+      ↓
+Playback
+      ↓
+Visualization
+```
+
+Major features include:
+
+### Specification Builder
+
+- Visual DP Builder
+- Custom symbols
+- Primitive and array inputs
+- Arbitrary state variables
+- Base cases
+- Transitions
+- Root state
+- Initial DP values
+- Runtime input editor
+
+---
+
+### Specification Compiler
+
+- Parsing
+- Semantic validation
+- Immutable intermediate representations
+- Runtime-compatible `ProblemSpec` generation
+
+---
+
+### Runtime
+
+- Generic execution engine
+- Top-down execution
+- Bottom-up execution
+- Runtime input parser
+- Initial DP value support
+- Arbitrary-dimensional execution
+
+---
+
+### Playback
+
+- Immutable execution traces
+- Playback controller
+- Frame generation
+- Deterministic navigation
+
+---
+
+### Visualization
+
+- 1D DP tables
+- 2D DP tables
+- Recursion tree
+- Timeline
+- Playback controls
+- Runtime statistics
+- Answer panel
+
+Execution currently supports arbitrary-dimensional state spaces.
+
+Visualization currently supports one- and two-dimensional tables.
+
+---
+
+# Version 2 — Propagation-Based Dynamic Programming
+
+**Status:** Planned
+
+Version 2 introduces a second execution model designed for propagation-based dynamic programming.
+
+Instead of evaluating
+
+```
+DP(state) = expression
+```
+
+the runtime will additionally support algorithms where states distribute values to successor states.
+
+Examples include:
+
+- Coin Change
+- Counting DP
+- SOS DP
+- Prefix/Difference-style DP
+- Many combinatorial recurrences
+
+Planned work:
+
+- Propagation execution engine
+- Transition graph visualization
+- Value-flow animation
+- Aggregation expressions
+- Quantifiers and iterators
+- Richer answer expressions
+
+---
+
+# Long-Term Vision
+
+Future versions may explore:
+
+- AI-assisted specification generation
+- Natural language → Builder conversion
+- Import/export of specifications
+- Graph DP
+- Tree DP
+- Automatic iteration-order inference
+- 3D and higher-dimensional visualization
+- Interactive recurrence explanation
+- Algorithm comparison (greedy vs DP)
+
+These ideas are exploratory and may evolve over time.
+
+---
+
+# Development Timeline
+
+DP Explorer was developed in several major milestones.
+
+## Phase 1 — Runtime Foundation
+
+- Repository structure
+- Generic runtime
+- Built-in templates
+- Playback engine
+- Visualization MVP
+
+This phase established the execution architecture.
+
+---
+
+## Phase 2 — Specification Compiler
+
+- Builder language
+- Parser
+- Semantic validator
+- ProblemSpec generator
+- Compiler facade
+
+This phase transformed DP Explorer from a template visualizer into a compiler-backed system.
+
+---
+
+## Phase 3 — Builder Integration
+
+- Runtime integration
+- Runtime input language
+- Initial DP values
+- Answer panel
+- Multi-dimensional state support
+- Builder polish
+
+This phase completed the end-to-end workflow from specification authoring to visualization.
+
+---
+
+# Guiding Principle
+
+DP Explorer favors architectural stability over rapid feature growth.
+
+New functionality should extend the existing abstractions—
+
+- `BuilderState`
+- `ProblemSpec`
+- `ExecutionTrace`
+- `ExecutionFrame`
+
+—rather than introducing problem-specific logic into the runtime.
