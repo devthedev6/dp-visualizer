@@ -1,66 +1,27 @@
 import { useEffect, useState } from "react";
 import { type InputField } from "@dp-explorer/core";
 import type { ExecutionFrame } from "@dp-explorer/playback";
-import { compileSpecification, type CompilerDiagnostic } from "@dp-explorer/spec-compiler";
+import {
+  compileSpecification,
+  createDefaultRuntimeInputText,
+  formatRuntimeInputType,
+  getRuntimeInputExample,
+  parseRuntimeInputs,
+  type CompilerDiagnostic
+} from "@dp-explorer/spec-compiler";
 import { DPTable } from "../dp-table";
 import { createProblemSpecSession, type DemoSession } from "../demo-session";
 import { FrameDetails } from "../frame-details";
 import { PlaybackTimeline } from "../playback-timeline";
 import { RecursionTreeView } from "../recursion-tree";
+import type { BuilderSymbol } from "./builder-state";
 import { useBuilderCompilation, useBuilderDispatch, useBuilderState } from "./builder-store";
 
-type RuntimeInput = Record<string, unknown>;
+type RuntimeInputText = Record<string, string>;
 
 interface ExecutionViewState {
   readonly session: DemoSession;
   readonly frame: ExecutionFrame;
-}
-
-function createDefaultRuntimeInput(fields: readonly InputField[]): RuntimeInput {
-  const input: RuntimeInput = {};
-
-  for (const field of fields) {
-    input[field.name] = field.type === "integer" ? (field.min ?? 6) : "";
-  }
-
-  return input;
-}
-
-function coerceRuntimeInput(fields: readonly InputField[], input: RuntimeInput): RuntimeInput {
-  const coerced: RuntimeInput = {};
-
-  for (const field of fields) {
-    const value = input[field.name];
-    if (field.type === "integerArray") {
-      coerced[field.name] = parseNumberList(value);
-    } else if (field.type === "stringArray") {
-      coerced[field.name] = parseStringList(value);
-    } else {
-      coerced[field.name] = value;
-    }
-  }
-
-  return coerced;
-}
-
-function parseNumberList(value: unknown): readonly number[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => Number(item));
-  }
-  if (typeof value !== "string" || value.trim() === "") {
-    return [];
-  }
-  return value.split(",").map((part) => Number(part.trim()));
-}
-
-function parseStringList(value: unknown): readonly string[] {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item));
-  }
-  if (typeof value !== "string" || value.trim() === "") {
-    return [];
-  }
-  return value.split(",").map((part) => part.trim());
 }
 
 function formatDiagnosticPath(path: readonly (string | number)[] | undefined): string | null {
@@ -99,7 +60,7 @@ export function ReviewCompileStage() {
   const builderState = useBuilderState();
   const compilation = useBuilderCompilation();
   const dispatch = useBuilderDispatch();
-  const [runtimeInput, setRuntimeInput] = useState<RuntimeInput>({});
+  const [runtimeInput, setRuntimeInput] = useState<RuntimeInputText>({});
   const [execution, setExecution] = useState<ExecutionViewState | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
 
@@ -107,11 +68,11 @@ export function ReviewCompileStage() {
     setExecution(null);
     setExecutionError(null);
     if (compilation.problemSpec) {
-      setRuntimeInput(createDefaultRuntimeInput(compilation.problemSpec.inputSchema));
+      setRuntimeInput(createDefaultRuntimeInputText(builderState.symbols));
     } else {
       setRuntimeInput({});
     }
-  }, [compilation.problemSpec]);
+  }, [builderState.symbols, compilation.problemSpec]);
 
   function compileCurrentSpecification() {
     const result = compileSpecification(builderState);
@@ -122,7 +83,7 @@ export function ReviewCompileStage() {
     }
   }
 
-  function updateRuntimeInput(name: string, value: unknown) {
+  function updateRuntimeInput(name: string, value: string) {
     setRuntimeInput((current) => ({ ...current, [name]: value }));
     setExecution(null);
     setExecutionError(null);
@@ -135,7 +96,7 @@ export function ReviewCompileStage() {
     }
 
     try {
-      const input = coerceRuntimeInput(compilation.problemSpec.inputSchema, runtimeInput);
+      const input = parseRuntimeInputs(builderState.symbols, runtimeInput);
       const session = createProblemSpecSession(
         compilation.problemSpec,
         input,
@@ -210,6 +171,7 @@ export function ReviewCompileStage() {
               <RuntimeInputControl
                 key={field.name}
                 field={field}
+                symbol={builderState.symbols.find((symbol) => symbol.name === field.name)}
                 value={runtimeInput[field.name]}
                 onChange={(value) => updateRuntimeInput(field.name, value)}
               />
@@ -268,35 +230,31 @@ export function ReviewCompileStage() {
 
 interface RuntimeInputControlProps {
   readonly field: InputField;
-  readonly value: unknown;
-  readonly onChange: (value: unknown) => void;
+  readonly symbol: BuilderSymbol | undefined;
+  readonly value: string | undefined;
+  readonly onChange: (value: string) => void;
 }
 
-function RuntimeInputControl({ field, value, onChange }: RuntimeInputControlProps) {
-  if (field.type === "integer") {
-    return (
-      <label className="builder-field">
-        <span>{field.label}</span>
-        <input
-          type="number"
-          min={field.min}
-          max={field.max}
-          value={typeof value === "number" && Number.isFinite(value) ? value : ""}
-          onChange={(event) => onChange(event.currentTarget.valueAsNumber)}
-        />
-      </label>
-    );
-  }
+function RuntimeInputControl({ field, symbol, value, onChange }: RuntimeInputControlProps) {
+  const inputId = `runtime-input-${field.name}`;
+  const hintId = `${inputId}-hint`;
 
   return (
-    <label className="builder-field">
-      <span>{field.label}</span>
+    <div className="builder-field">
+      <label htmlFor={inputId}>{field.label}</label>
       <input
+        id={inputId}
         type="text"
         maxLength={field.maxLength}
-        value={typeof value === "string" ? value : ""}
+        value={value ?? ""}
+        aria-describedby={symbol ? hintId : undefined}
         onChange={(event) => onChange(event.currentTarget.value)}
       />
-    </label>
+      {symbol && (
+        <span id={hintId} className="builder-field-hint">
+          {formatRuntimeInputType(symbol)} example: <code>{getRuntimeInputExample(symbol)}</code>
+        </span>
+      )}
+    </div>
   );
 }

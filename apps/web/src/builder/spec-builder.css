@@ -182,9 +182,16 @@
   flex: 1 1 auto;
 }
 
+.builder-field label,
 .builder-field span {
   font-size: 0.875rem;
   color: #374151;
+}
+
+.builder-field .builder-field-hint {
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 400;
 }
 
 .builder-field input,
