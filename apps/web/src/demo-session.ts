@@ -1,7 +1,7 @@
 import {
   EventType,
-  runBottomUp,
-  runTopDown,
+  FunctionalRuntime,
+  type FunctionalExecutionMode,
   type FunctionalProblemSpec,
   type TraceEvent
 } from "@dp-explorer/core";
@@ -10,7 +10,7 @@ import { createPlaybackController } from "@dp-explorer/playback";
 import type { RegisteredTemplate } from "@dp-explorer/templates";
 import { coordinateKey } from "@dp-explorer/templates";
 
-export type RuntimeExecutionMode = "top-down" | "bottom-up";
+export type RuntimeExecutionMode = FunctionalExecutionMode;
 
 export interface DemoSession {
   readonly controller: PlaybackController;
@@ -37,7 +37,7 @@ export function createProblemSpecSession<Input>(
   input: Input,
   mode: RuntimeExecutionMode
 ): DemoSession {
-  const result = mode === "bottom-up" ? runBottomUp(spec, input) : runTopDown(spec, input);
+  const result = new FunctionalRuntime<Input>(mode).execute(spec, input);
   const controller = createPlaybackController(result.trace);
   const answer = readCompleteAnswer(result.trace.events);
 
