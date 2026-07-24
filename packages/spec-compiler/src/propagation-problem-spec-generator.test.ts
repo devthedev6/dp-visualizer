@@ -1,5 +1,6 @@
 import type { PropagationBuilderState } from "./builder-state";
 import { compilePropagationSpecification } from "./compiler";
+import { PropagationRuntime } from "@dp-explorer/core";
 import { describe, expect, it } from "vitest";
 
 describe("compilePropagationSpecification", () => {
@@ -30,6 +31,31 @@ describe("compilePropagationSpecification", () => {
         }
       })
     ).toBe(8);
+  });
+
+  it("executes the compiled propagation specification end-to-end", () => {
+    const result = compilePropagationSpecification(createPropagationBuilderState());
+
+    expect(result.success).toBe(true);
+    if (!result.success) {
+      return;
+    }
+
+    const execution = new PropagationRuntime<Record<string, unknown>>().execute(
+      result.problemSpec,
+      {
+        n: 3
+      }
+    );
+
+    expect([...execution.dpTable.entries()]).toEqual([
+      ["0", 1],
+      ["1", 1],
+      ["2", 1],
+      ["3", 1]
+    ]);
+    expect(execution.trace.mode).toBe("propagation");
+    expect(execution.trace.events.at(-1)).toMatchObject({ type: "COMPLETE", answer: 1 });
   });
 });
 

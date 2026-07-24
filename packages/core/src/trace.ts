@@ -1,12 +1,13 @@
 import type { StateKey } from "./state-key";
 
 /**
- * Execution mode for a trace produced from a functional specification.
+ * Execution mode for an execution trace.
  *
- * The same specification must support both modes; the mode belongs to
- * execution, not to template authoring.
+ * The mode belongs to execution, not to template authoring. Functional
+ * specifications support top-down and bottom-up execution, while propagation
+ * specifications have their own transition-driven runtime.
  */
-export type ExecutionMode = "top-down" | "bottom-up";
+export type ExecutionMode = "top-down" | "bottom-up" | "propagation";
 
 /**
  * Trace event discriminants. The string values are the canonical event names
